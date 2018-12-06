@@ -1,11 +1,7 @@
 #ifndef _LIST_H
 #define _LIST_H
 
-#define offsetof( TYPE, MEMBER ) ( ( size_t ) & ( (TYPE *)0 )->MEMBER )
-
-#define container_of( ptr, type, member ) ( { \
-    const typeof( ((type *)0)->member ) *__mptr = (ptr); \
-    (type *)( (char *)__mptr - offsetof(type,member) ); } )
+#include <kos/kernel.h>
 
 #define LIST_POISON1 (void *)0x10101010
 #define LIST_POISON2 (void *)0x20202020

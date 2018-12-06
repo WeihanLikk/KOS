@@ -1,7 +1,7 @@
 #ifndef _SCHED_H
 #define _SCHED_H
 
-#include <kos/pid.h>
+#include <kos/rbtree.h>
 
 #define TASK_RUNNING 0			//进程要么正在执行，要么准备执行
 #define TASK_INTERRUPTIBLE 1	//可中断的睡眠，可以通过一个信号唤醒
@@ -16,13 +16,14 @@
 #define TASK_WAKEKILL 128  //唤醒并杀死的进程
 #define TASK_WAKING 256	//唤醒进程
 
-register struct thread_info *__current_thread_info __asm__( "$28" );  //这个感觉有问题，不能定义在这里
+// register struct thread_info *__current_thread_info __asm__( "$28" );  //这个感觉有问题，不能定义在这里
 #define current_thread_info() __current_thread_info
 #define get_current() ( current_thread_info()->task )
 #define current get_current()
 
-typedef struct task_struct task_t;
-typedef int pid_t;
+// #define get_cfs() &( rq.cfs )
+#define get_cfs() &cfs_rq
+#define NICE_0_LOAD 1024
 
 struct reg_context
 {
@@ -40,21 +41,65 @@ struct reg_context
 	unsigned int ra;
 };
 
+struct load_weight
+{
+	unsigned long weight, inv_weight;
+};
+
+struct cfs_rq
+{
+	struct load_weight load;
+	unsigned long nr_running;
+	unsigned long exec_clock;
+	unsigned long min_vruntime;
+
+	struct rb_root tasks_timeline;
+	struct rb_node *rb_leftmost;
+	struct rb_node *rb_load_balance_curr;
+
+	struct sched_entity *curr;
+
+	unsigned long nr_spread_over;  //ss
+
+	unsigned long long clock;
+};
+
+// struct rq
+// {
+// 	unsigned long clock;
+// 	struct cfs_rq cfs;
+// };
+
+struct sched_entity
+{
+	struct load_weight load; /* for load-balancing */
+	struct rb_node run_node;
+	unsigned int on_rq;
+
+	unsigned long long exec_start;
+	unsigned long long sum_exec_runtime;
+	unsigned long long vruntime;
+	unsigned long long prev_sum_exec_runtime;
+
+	struct cfs_rq *cfs_rq;
+};
+
 struct task_struct
 {
 	volatile long state;
 	void *stack;
 
-	struct list_head tasks;
-	struct mm_struct *mm;
+	// struct list_head tasks;
+	// struct mm_struct *mm;
 
-	struct task_struct *parent;
-	struct list_head children; /* list of my children */
-	struct list_head sibling;  /* linkage in my parent's children list */
-
+	// struct task_struct *parent;
+	// struct list_head children; /* list of my children */
+	// struct list_head sibling;  /* linkage in my parent's children list */
+	int prioiry;
+	struct sched_entity se;
 	struct reg_context context;
 
-	pid_t _pid;
+	int pid;
 	struct pid pids;
 };
 
@@ -69,4 +114,6 @@ union thread_union
 	unsigned long stack[ PAGE_SIZE / sizeof( long ) ];
 };
 
+// struct rq rq;
+struct cfs_rq cfs_rq;
 #endif

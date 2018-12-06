@@ -1,6 +1,8 @@
 #ifndef _HLIST_H
 #define _HLIST_H
 
+#include <kos/kernel.h>
+
 static inline void prefetch( const void *x )
 {
 	;
@@ -9,12 +11,6 @@ static inline void prefetchw( const void *x )
 {
 	;
 }
-
-#define offsetof( TYPE, MEMBER ) ( ( size_t ) & ( (TYPE *)0 )->MEMBER )
-
-#define container_of( ptr, type, member ) ( { \
-    const typeof( ((type *)0)->member ) *__mptr = (ptr); \
-    (type *)( (char *)__mptr - offsetof(type,member) ); } )
 
 #ifndef LIST_POISON1
 #define LIST_POISON1 ( (void *)0x00100100 )

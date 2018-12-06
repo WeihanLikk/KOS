@@ -7,12 +7,22 @@
 #define PID_MAX_DEFAULT 0x8000
 #define pid_task( elem ) \
 	list_entry( elem, struct task_struct, pids.pid_list )
+#define PID_MAX_DEFAULT 0x8000 /* max pid, equal to 2^15=32768 */
+#define PAGE_SHIFT 12
+#define PAGE_SIZE ( 1UL << PAGE_SHIFT ) /* page size = 2^12 = 4K */
+#define BITS_PER_BYTE 8
+//4k*8 32768
+#define BITS_PER_PAGE ( PAGE_SIZE * BITS_PER_BYTE )
+//7fff
+//0111 1111 1111 1111
+#define BITS_PER_PAGE_MASK ( BITS_PER_PAGE - 1 )
+#define RESERVED_PIDS 10
 
-struct pidmap
+typedef struct pidmap
 {
 	int nr_free;
-	void *page;
-};
+	char page[ PAGE_SIZE ];
+} pidmap_t;
 
 struct pid
 {
@@ -20,5 +30,13 @@ struct pid
 	int nr;						  //PID
 	struct hlist_node pid_chain;  //pid hash 散列表结点
 };
+
+void pidhash_initial();
+void pidmap_init();
+int alloc_pidmap();
+void free_pidmap( int pid );
+struct task_struct *find_task_by_pid( int nr );
+void attach_pid( struct task_struct *task, int nr );
+void detach_pid( struct task_struct *task );
 
 #endif
