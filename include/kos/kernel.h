@@ -32,6 +32,9 @@
 		( b ) = tmp;             \
 	} while ( 0 )
 
+#define for_each_sched_entity( se ) \
+	for ( ; se; se = NULL )
+
 static inline unsigned int xfs_do_div( void *a, unsigned int b, int n )
 {
 	unsigned int mod;
@@ -50,5 +53,7 @@ static inline unsigned int xfs_do_div( void *a, unsigned int b, int n )
 	/* NOTREACHED */
 	return 0;
 }
+
+#define INIT_TASK( tsk )
 
 #endif

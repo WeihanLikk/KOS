@@ -2,6 +2,7 @@
 #define _SCHED_H
 
 #include <kos/rbtree.h>
+#include <kos/kernel.h>
 
 #define TASK_RUNNING 0			//进程要么正在执行，要么准备执行
 #define TASK_INTERRUPTIBLE 1	//可中断的睡眠，可以通过一个信号唤醒
@@ -50,8 +51,8 @@ struct cfs_rq
 {
 	struct load_weight load;
 	unsigned long nr_running;
-	unsigned long exec_clock;
-	unsigned long min_vruntime;
+	unsigned long long exec_clock;
+	unsigned long long min_vruntime;
 
 	struct rb_root tasks_timeline;
 	struct rb_node *rb_leftmost;
@@ -116,4 +117,5 @@ union thread_union
 
 // struct rq rq;
 struct cfs_rq cfs_rq;
+struct task_struct init_task = INIT_TASK( init_task );
 #endif
