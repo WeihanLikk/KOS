@@ -11,7 +11,7 @@ int last_pid;
 
 void pidmap_init()
 {
-	last_pid = 0;
+	last_pid = -1;
 	pid_map.nr_free = PID_MAX_DEFAULT;
 	for ( int i = 0; i < PAGE_SIZE; i++ )
 	{

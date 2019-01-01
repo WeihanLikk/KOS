@@ -7,8 +7,8 @@
 
 #define TASK_RUNNING 0  //进程要么正在执行，要么准备执行
 #define TASK_READY 1
-#define TASK_DEAD 2	//死亡
-#define TASK_WAKING 3  //唤醒进程
+#define TASK_DEAD 2		//死亡
+#define TASK_WAITING 3  //唤醒进程
 #define TASK_RUNNING_IDLE 4
 
 #define TASK_NAME_LEN 32
@@ -208,6 +208,8 @@ struct task_struct
 
 	struct sched_entity se;
 	struct reg_context context;
+
+	struct list_head node;
 };
 
 struct thread_info
@@ -246,4 +248,6 @@ void sys_prioiry( int increment );
 int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *retpid );
 int exec( unsigned int argc, void *args, int is_wait );
 void do_exit();
+int pc_kill( pid_t pid );
+void waitpid( pid_t pid );
 #endif

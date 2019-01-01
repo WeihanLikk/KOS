@@ -36,6 +36,7 @@ void pidhash_initial();
 void pidmap_init();
 int alloc_pidmap();
 void free_pidmap( int pid );
+struct pid *find_pid( int nr );
 struct task_struct *find_task_by_pid( int nr );
 void attach_pid( struct task_struct *task, int nr );
 void detach_pid( struct task_struct *task );

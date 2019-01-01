@@ -1,6 +1,9 @@
 #include <kos/sched.h>
 #include <arch/mips32/intr.h>
 
+struct list_head wait;
+struct list_head exited;
+
 static void init_cfs_rq( struct cfs_rq *cfs_rq )
 {
 	cfs_rq->tasks_timeline = RB_ROOT;
@@ -19,8 +22,10 @@ static void set_load_weight( struct task_struct *p )
 	p->se.load.inv_weight = prio_to_wmult[ p->prioiry - MAX_RT_PRIO ];
 }
 
-static int need_resched( struct task_struct *p )
+static int need_resched()
 {
+	struct cfs_rq *cfs_rq = get_cfs();
+	struct task_struct *p = cfs_rq->current_task;
 	if ( unlikely( p->THREAD_FLAG == TIF_NEED_RESCHED ) )
 	{
 		return 1;
@@ -66,7 +71,15 @@ static void init_cfs_rq( struct cfs_rq *cfs_rq )
 static void update_cfs_clock( struct cfs_rq *cfs_rq )
 {
 	unsigned long long prev_clock = cfs_rq->prev_clock_raw;
-	unsigned long long now = timeCount * CLOCK_INTERRUPTER_TICK;
+	unsigned int ticks_high, ticks_low;
+	asm volatile(
+	  "mfc0 %0, $9, 6\n\t"
+	  "mfc0 %1, $9, 7\n\t"
+	  : "=r"( ticks_low ), "=r"( ticks_high ) );
+	unsigned long long now = ticks_high;
+	now << 32;
+	now += ticks_low;
+	// unsigned long long now = timeCount * CLOCK_INTERRUPTER_TICK;
 	signed long long delta = now - prev_clock;
 	unsigned long long clock = cfs_rq->clock;
 
@@ -82,14 +95,24 @@ void init_idle( struct task_struct *idle )
 	//
 	struct cfs_rq *cfs_rq = get_cfs();
 	cfs_rq->idle = idle;
+	cfs_rq->idle->pid = alloc_pidmap();
+	if ( cfs_rq->idle->pid != 0 )
+	{
+		kernel_printf( "idle pid error\n" );
+		while ( 1 )
+			;
+	}
 }
 void sched_init()
 {
-	set_load_weight( &init_task );
-	init_idle( &init_task );
 	init_cfs_rq( get_cfs() );
 	pidhash_initial();
 	pidmap_init();
+	set_load_weight( &init_task );
+	init_idle( &init_task );
+
+	INIT_LIST_HEAD( &exited );
+	INIT_LIST_HEAD( &wait );
 
 	register_interrupt_handler( 7, scheduler_tick );
 	asm volatile(
@@ -117,7 +140,7 @@ void scheduler( struct reg_context *pt_context )
 	struct task_struct *prev, *next;
 	struct cfs_rq *cfs_rq;
 	cfs_rq = get_cfs();
-	disable_interrupts();
+	//disable_interrupts();
 	do
 	{
 		prev = cfs_rq->current_task;
@@ -141,11 +164,11 @@ void scheduler( struct reg_context *pt_context )
 			cfs_rq->current_task = next;
 			cfs_rq->curr = &next->se;
 
-			copy_context( pt_context, &( cfs_rq->current_task->context ) );
+			copy_context( &( cfs_rq->current_task->context ), pt_context );
 			//context_switch!!
 		}
-	} while ( need_resched( next ) );
-	enable_interrupts();
+	} while ( need_resched() );
+	//enable_interrupts();
 }
 
 void sched_fork( struct task_struct *p )
@@ -284,15 +307,41 @@ int execproc( unsigned int argc, void *args )
 
 static int try_to_wake_up( struct task_struct *p )
 {
-	int sucess = 0;
+	int success = 0;
+	struct cfs_rq *cfs_rq = get_cfs();
 	if ( p->se.on_rq )
 	{
 		p->state = TASK_RUNNING;
+		goto out_running;
 	}
+	update_cfs_clock( cfs_rq );
+	enqueue_task_fair( cfs_rq, p, 1 );
+	p->se.on_rq = 1;
+	cfs_rq->nr_running++;
+	cfs_rq->load.weight += p->se.load.weight;
+	check_preempt_wakeup( cfs_rq, p );
+	success = 1;
+
 out_running:
 	p->state = TASK_RUNNING;
-out:
+
 	return success;
+}
+
+static void add_wait( struct task_struct *task )
+{
+	list_add_tail( &( task->node ), &wait );
+}
+
+static void add_exited( struct task_struct *task )
+{
+	list_add_tail( &( task->node ), &exited );
+}
+
+static void remove_wait( struct task_struct *p )
+{
+	list_del( &( p->node ) );
+	INIT_LIST_HEAD( &( p->node ) );
 }
 
 void do_exit()
@@ -317,7 +366,112 @@ void do_exit()
 	current->state = TASK_DEAD;
 
 	struct task_struct *parent = find_task_by_pid( current->parent );
-	try_to_wake_up( parent );
+	int res = try_to_wake_up( parent );
+	if ( res == 0 )
+	{
+		kernel_printf( "The parent is alreadly in cfs_rq\n" );
+	}
+
+	if ( current->se.on_rq )
+	{
+		dequeu_task_fair( cfs_rq, current, 0 );
+	}
+	free_pidmap( current->pid );
+	detach_pid( current );
+	add_exited( current );
+	// prev = cfs_rq->current_task;
+	update_cfs_clock( cfs_rq );
+
+	//put_prev_task_fair( cfs_rq, current );
+	next = pick_next_task( cfs_rq, current );
+
+	if ( likely( current != next ) )
+	{
+		// copy_context( pt_context, &( cfs_rq->current_task->context ) );
+
+		cfs_rq->current_task = next;
+		cfs_rq->curr = &next->se;
+		switch_ex( &( cfs_rq->current_task->context ) );
+		// copy_context( &( cfs_rq->current_task->context ), pt_context );
+		//context_switch!!
+	}
+
+	kernel_printf( "Error: pc_exit\n" );
+}
+
+//1-success, 0-unsuccess
+int pc_kill( pid_t pid )
+{
+	struct cfs_rq *cfs_rq = get_cfs();
+	if ( pid == 0 || pid == 1 || cfs_rq->current_task->pid )
+	{
+		kernel_printf( "Cannot kill this\n" );
+		return 0;
+	}
+
+	disable_interrupts();
+
+	if ( !find_pid( pid ) )
+	{
+		kernel_printf( "pid not found\n" );
+		enable_interrupts();
+		return 0;
+	}
+
+	struct task_struct *p = find_task_by_pid( pid );
+	p->state = TASK_DEAD;
+	if ( p->se.on_rq )
+	{
+		dequeu_task_fair( cfs_rq, p, 0 );
+	}
+	add_exited( p );
+	free_pidmap( pid );
+	enable_interrupts();
+	return 1;
+}
+
+void waitpid( pid_t pid )
+{
+	disable_interrupts();
+	struct task_struct *p = find_task_by_pid( pid );
+	if ( !p->se.on_rq )
+	{
+		kernel_printf( "The child process is not onrq\n" );
+		enable_interrupts();
+		return;
+	}
+	enable_interrupts();
+
+	asm volatile(
+	  "mfc0  $t0, $12\n\t"
+	  "ori   $t0, $t0, 0x02\n\t"
+	  "mtc0  $t0, $12\n\t"
+	  "nop\n\t"
+	  "nop\n\t" );
+
+	struct cfs_rq *cfs_rq = get_cfs();
+	struct task_struct *current = cfs_rq->current_task;
+
+	current->state = TASK_WAITING;
+	if ( current->se.on_rq )
+	{
+		dequeu_task_fair( cfs_rq, current, 0 );
+	}
+	add_wait( current );
+
+	update_cfs_clock( cfs_rq );
+	struct task_struct *next = pick_next_task( cfs_rq, current );
+
+	if ( likely( current != next ) )
+	{
+		cfs_rq->current_task = next;
+		cfs_rq->curr = &next->se;
+		switch_wa( &( next->context ), &( current->context ) );
+	}
+	else
+	{
+		kernel_printf( "Error if comes to here in waitpid\n" );
+	}
 }
 
 static void set_priority( struct task_struct *p, long prioiry )
