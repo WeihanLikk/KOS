@@ -17,6 +17,7 @@
 //0111 1111 1111 1111
 #define BITS_PER_PAGE_MASK ( BITS_PER_PAGE - 1 )
 #define RESERVED_PIDS 10
+typedef int pid_t;
 
 typedef struct pidmap
 {

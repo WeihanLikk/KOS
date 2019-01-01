@@ -283,7 +283,6 @@ struct rb_node *rb_first( struct rb_root *root )
 		n = n->rb_left;
 	return n;
 }
-EXPORT_SYMBOL( rb_first );
 
 struct rb_node *rb_last( struct rb_root *root )
 {

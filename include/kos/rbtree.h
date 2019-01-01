@@ -1,6 +1,6 @@
 #ifndef _KOS_RBTREE_H
 #define _KOS_RBTREE_H
-
+#include <kos/kernel.h>
 struct rb_node
 {
 	unsigned long rb_parent_color;
@@ -16,6 +16,8 @@ struct rb_root
 	struct rb_node *rb_node;
 };
 
+#define RB_ROOT \
+	( struct rb_root ) { NULL, }
 #define rb_entry( ptr, type, member ) container_of( ptr, type, member )
 #define rb_parent( r ) ( (struct rb_node *)( ( r )->rb_parent_color & ~3 ) )
 #define rb_color( r ) ( ( r )->rb_parent_color & 1 )

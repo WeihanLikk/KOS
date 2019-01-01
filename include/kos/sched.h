@@ -3,28 +3,125 @@
 
 #include <kos/rbtree.h>
 #include <kos/kernel.h>
+#include <kos/pid.h>
 
-#define TASK_RUNNING 0			//进程要么正在执行，要么准备执行
-#define TASK_INTERRUPTIBLE 1	//可中断的睡眠，可以通过一个信号唤醒
-#define TASK_UNINTERRUPTIBLE 2  //不可中断睡眠，不可以通过信号进行唤醒
-#define __TASK_STOPPED 4		//进程停止执行
-#define __TASK_TRACED 8			//进程被追踪
-/* in tsk->exit_state */
-#define EXIT_ZOMBIE 16  //僵尸状态的进程，表示进程被终止，但是父进程还没       有获取它的终止信息，比如进程有没有执行完等信息。
-#define EXIT_DEAD 32	//进程的最终状态，进程死亡。
-/* in tsk->state again */
-#define TASK_DEAD 64	   //死亡
-#define TASK_WAKEKILL 128  //唤醒并杀死的进程
-#define TASK_WAKING 256	//唤醒进程
+#define TASK_RUNNING 0  //进程要么正在执行，要么准备执行
+#define TASK_READY 1
+#define TASK_DEAD 2	//死亡
+#define TASK_WAKING 3  //唤醒进程
+#define TASK_RUNNING_IDLE 4
 
-// register struct thread_info *__current_thread_info __asm__( "$28" );  //这个感觉有问题，不能定义在这里
-#define current_thread_info() __current_thread_info
-#define get_current() ( current_thread_info()->task )
-#define current get_current()
+#define TASK_NAME_LEN 32
+
+// // register struct thread_info *__current_thread_info __asm__( "$28" );  //这个感觉有问题，不能定义在这里
+// #define current_thread_info() __current_thread_info
+// #define get_current() ( current_thread_info()->task )
+// #define current get_current()
 
 // #define get_cfs() &( rq.cfs )
 #define get_cfs() &cfs_rq
+
 #define NICE_0_LOAD 1024
+#define MAX_RT_PRIO 100
+#define NICE_TO_PRIO( nice ) ( MAX_RT_PRIO + ( nice ) + 20 )
+#define PRIO_TO_NICE( prio ) ( (prio)-MAX_RT_PRIO - 20 )
+
+#define TIF_NEED_RESCHED 3
+#define SCHED_IDLE 5
+#define SCHED_NORMAL 8
+#define WEIGHT_IDLEPRIO 2
+#define WMULT_IDLEPRIO ( 1 << 31 )
+
+#define KERNEL_STACK_SIZE 4096
+
+#define CLOCK_INTERRUPTER_TICK 10  //msec
+unsigned long timeCount = 0;
+
+static const int prio_to_weight[ 40 ] = {
+	/* -20 */ 88761,
+	71755,
+	56483,
+	46273,
+	36291,
+	/* -15 */ 29154,
+	23254,
+	18705,
+	14949,
+	11916,
+	/* -10 */ 9548,
+	7620,
+	6100,
+	4904,
+	3906,
+	/*  -5 */ 3121,
+	2501,
+	1991,
+	1586,
+	1277,
+	/*   0 */ 1024,
+	820,
+	655,
+	526,
+	423,
+	/*   5 */ 335,
+	272,
+	215,
+	172,
+	137,
+	/*  10 */ 110,
+	87,
+	70,
+	56,
+	45,
+	/*  15 */ 36,
+	29,
+	23,
+	18,
+	15,
+};
+
+static const unsigned int prio_to_wmult[ 40 ] = {
+	/* -20 */ 48388,
+	59856,
+	76040,
+	92818,
+	118348,
+	/* -15 */ 147320,
+	184698,
+	229616,
+	287308,
+	360437,
+	/* -10 */ 449829,
+	563644,
+	704093,
+	875809,
+	1099582,
+	/*  -5 */ 1376151,
+	1717300,
+	2157191,
+	2708050,
+	3363326,
+	/*   0 */ 4194304,
+	5237765,
+	6557202,
+	8165337,
+	10153587,
+	/*   5 */ 12820798,
+	15790321,
+	19976592,
+	24970740,
+	31350126,
+	/*  10 */ 39045157,
+	49367440,
+	61356676,
+	76695844,
+	95443717,
+	/*  15 */ 119304647,
+	148102320,
+	186737708,
+	238609294,
+	286331153,
+};
 
 struct reg_context
 {
@@ -59,10 +156,12 @@ struct cfs_rq
 	struct rb_node *rb_load_balance_curr;
 
 	struct sched_entity *curr;
-
-	unsigned long nr_spread_over;  //ss
+	struct task_struct *current_task;
+	struct task_struct *idle;
 
 	unsigned long long clock;
+	unsigned long long prev_clock_raw;
+	unsigned long clock_max_delta;
 };
 
 // struct rq
@@ -81,14 +180,20 @@ struct sched_entity
 	unsigned long long sum_exec_runtime;
 	unsigned long long vruntime;
 	unsigned long long prev_sum_exec_runtime;
+	unsigned long long exec_max;
+	unsigned long long wait_start;
+	unsigned long long wait_max;
 
 	struct cfs_rq *cfs_rq;
 };
 
 struct task_struct
 {
+	pid_t pid;
+	pid_t parent;
+	struct pid pids;
 	volatile long state;
-	void *stack;
+	unsigned char name[ TASK_NAME_LEN ];
 
 	// struct list_head tasks;
 	// struct mm_struct *mm;
@@ -97,25 +202,48 @@ struct task_struct
 	// struct list_head children; /* list of my children */
 	// struct list_head sibling;  /* linkage in my parent's children list */
 	int prioiry;
+	unsigned int policy;
+
+	unsigned int THREAD_FLAG;
+
 	struct sched_entity se;
 	struct reg_context context;
-
-	int pid;
-	struct pid pids;
 };
 
 struct thread_info
 {
-	struct task_struct *task;
+	struct task_struct *task;  // may be wrong, because I am not sure if this thread_info should exits
 };
 
 union thread_union
 {
-	struct thread_info thread_info;
+	struct task_struct *task;
 	unsigned long stack[ PAGE_SIZE / sizeof( long ) ];
 };
 
-// struct rq rq;
+#define INIT_TASK( tsk )            \
+	{                               \
+		.name = "idle",             \
+		.state = TASK_RUNNING_IDLE, \
+		.THREAD_FLAG = 0,           \
+		.pid = 0,                   \
+		.parent = 0,                \
+		.policy = SCHED_IDLE,       \
+		.prioiry = 120,             \
+	}
+
 struct cfs_rq cfs_rq;
 struct task_struct init_task = INIT_TASK( init_task );
+
+void task_tick_fair( struct cfs_rq *cfs_rq, struct task_struct *curr );
+void task_new_fair( struct cfs_rq *cfs_rq, struct task_struct *p );
+void check_preempt_wakeup( struct cfs_rq *cfs_rq, struct task_struct *p );
+void enqueue_task_fair( struct cfs_rq *cfs_rq, struct task_struct *p, int wakeup );
+void dequeu_task_fair( struct cfs_rq *cfs_rq, struct task_struct *p, int sleep );
+void put_prev_task_fair( struct cfs_rq *cfs_rq, struct task_struct *prev );
+struct task_struct *pick_next_task_fair( struct cfs_rq *cfs_rq );
+void sys_prioiry( int increment );
+int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *retpid );
+int exec( unsigned int argc, void *args, int is_wait );
+void do_exit();
 #endif

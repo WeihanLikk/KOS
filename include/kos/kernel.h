@@ -1,6 +1,13 @@
 #ifndef _KERNEL_H
 #define _KERNEL_H
 
+#undef NULL
+#if defined( __cplusplus )
+#define NULL 0
+#else
+#define NULL ( (void *)0 )
+#endif
+
 #define min( x, y ) ( { \
 	typeof(x) _x = (x);	\
 	typeof(y) _y = (y);	\
@@ -21,6 +28,7 @@
 
 #define likely( x ) __builtin_expect( !!( x ), 1 )
 #define unlikely( x ) __builtin_expect( !!( x ), 0 )
+#define fastcall __attribute__( ( regparm( 3 ) ) )
 
 #define do_div( a, b ) xfs_do_div( &( a ), ( b ), sizeof( a ) )
 
@@ -54,6 +62,10 @@ static inline unsigned int xfs_do_div( void *a, unsigned int b, int n )
 	return 0;
 }
 
-#define INIT_TASK( tsk )
+#define schedstat_add( rq, field, amt ) \
+	do                                  \
+	{                                   \
+		( rq )->field += ( amt );       \
+	} while ( 0 )
 
 #endif

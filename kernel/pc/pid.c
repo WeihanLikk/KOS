@@ -11,7 +11,7 @@ int last_pid;
 
 void pidmap_init()
 {
-	last_pid = -1;
+	last_pid = 0;
 	pid_map.nr_free = PID_MAX_DEFAULT;
 	for ( int i = 0; i < PAGE_SIZE; i++ )
 	{
@@ -102,7 +102,7 @@ struct pid *find_pid( int nr )
 	return NULL;
 }
 
-task_t *find_task_by_pid( int nr )
+struct task_struct *find_task_by_pid( int nr )
 {
 	struct pid *pid;
 	pid = find_pid( nr );
@@ -110,10 +110,10 @@ task_t *find_task_by_pid( int nr )
 	{
 		return NULL;
 	}
-	return pid_task( &pid->pid_list, type );
+	return pid_task( &pid->pid_list );
 }
 
-void attach_pid( task_t *task, int nr )
+void attach_pid( struct task_struct *task, int nr )
 {
 	struct pid *pid, *task_pid;
 	task_pid = &( task->pids );
@@ -132,9 +132,9 @@ void attach_pid( task_t *task, int nr )
 	task_pid->nr = nr;
 }
 
-void detach_pid( task_t *task )
+void detach_pid( struct task_struct *task )
 {
-	struct pid *pid, pidd_next;
+	struct pid *pid, *pid_next;
 	int nr = 0;
 
 	pid = &task->pids;
