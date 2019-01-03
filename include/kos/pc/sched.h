@@ -19,7 +19,7 @@
 // #define current get_current()
 
 // #define get_cfs() &( rq.cfs )
-struct cfs_rq my_cfs_rq;
+extern struct cfs_rq my_cfs_rq;
 #define get_cfs() &my_cfs_rq
 
 #define NICE_0_LOAD 1024
@@ -197,7 +197,8 @@ struct task_struct
 	unsigned char name[ TASK_NAME_LEN ];
 
 	// struct list_head tasks;
-	// struct mm_struct *mm;
+	struct mm_struct *mm;
+	unsigned int ASID;
 
 	// struct task_struct *parent;
 	// struct list_head children; /* list of my children */

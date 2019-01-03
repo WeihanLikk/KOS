@@ -9,21 +9,15 @@
 .set noat
 .align 2
 
-exception:
-	#TLB refill
- 	mfc0 $k0, $4
- 	lw $k1, 0($k0)
- 	mtc0 $k1, $2
- 	lw $k1, 4($k0)
- 	mtc0 $k1, $3
- 	lw $k1, 8($k0)
- 	mtc0 $k1, $10
- 	lw $k1, 12($k0)
- 	mtc0 $k1, $5
- 	nop #	CP0 hazard
- 	nop #  	CP0 hazard
- 	tlbwr
- 	eret
+.org 0x0000
+	lui $k0, 0x8000
+	sltu $k0, $sp, $k0
+	beq $k0, $zero, tlb_exception_save_context
+	move $k1, $sp
+	la  $k0, kernel_sp	
+	j tlb_exception_save_context
+	lw  $sp, 0($k0)
+
 
 .org 0x0180
 	lui $k0, 0x8000
@@ -159,14 +153,14 @@ exception_save_context:
 	sw $k1, 116($sp)
 	sw $fp, 120($sp)
 	sw $ra, 124($sp)
-	mfc0 $a0, $12
-	mfc0 $a1, $13
-	mfc0 $a2, $14
+	mfc0 $a0, $12 # status
+	mfc0 $a1, $13 # cause
+	mfc0 $a2, $14 # EPC
 	mfhi $t3
 	mflo $t4
 	sw $a2, 0($sp) # EPC
 	sw $t3, 104($sp) # HI
-	sw $t4, 108($sp) # LO
+	sw $t4, 108($sp) # LO   why 104? why 108????
 
 # jump to do_exceptions
 	move $a2, $sp
@@ -177,6 +171,75 @@ exception_save_context:
 
 	j restore_context
 	nop
+
+tlb_exception_save_context:
+	addiu $sp, $sp, -128
+	sw $at, 4($sp)
+	sw $v0, 8($sp)
+	sw $v1, 12($sp)
+	sw $a0, 16($sp)
+	sw $a1, 20($sp)
+	sw $a2, 24($sp)
+	sw $a3, 28($sp)
+	sw $t0, 32($sp)
+	sw $t1, 36($sp)
+	sw $t2, 40($sp)
+	sw $t3, 44($sp)
+	sw $t4, 48($sp)
+	sw $t5, 52($sp)
+	sw $t6, 56($sp)
+	sw $t7, 60($sp)
+	sw $s0, 64($sp)
+	sw $s1, 68($sp)
+	sw $s2, 72($sp)
+	sw $s3, 76($sp)
+	sw $s4, 80($sp)
+	sw $s5, 84($sp)
+	sw $s6, 88($sp)
+	sw $s7, 92($sp)
+	sw $t8, 96($sp)
+	sw $t9, 100($sp)
+	sw $gp, 112($sp)
+	sw $k1, 116($sp)
+	sw $fp, 120($sp)
+	sw $ra, 124($sp)
+	mfc0 $a0, $12
+	mfc0 $a1, $13
+	mfc0 $a2, $14
+	mfhi $t3
+	mflo $t4
+	sw $a2, 0($sp) # EPC
+	sw $t3, 104($sp) # HI
+	sw $t4, 108($sp) # LO
+
+# jump to tlb_exceptions
+	move $a2, $sp
+	addi $sp, $sp, -32
+	jal tlb_exception
+	nop
+	addi $sp, $sp, 32
+
+	j restore_context
+	nop
+
+tlb_exception:
+	#TLB refill
+ 	mfc0 $k0, $4 # context, page table entry
+ 	lw $k1, 0($k0) 
+ 	mtc0 $k1, $2 # copy the first content in page table entry address to EntryLo0
+ 	lw $k1, 4($k0) 
+ 	mtc0 $k1, $3 # copy the second content in (page table entry address +4) to EntryLo1
+ 	lw $k1, 8($k0) 
+ 	mtc0 $k1, $10 # copy the third content in (page table entry address +8) to EntryHi
+ 	lw $k1, 12($k0)
+ 	mtc0 $k1, $5 # copy the forth content in (page table entry address +12) to PageMask
+ 	nop #	CP0 hazard
+ 	nop #  	CP0 hazard
+ 	tlbwr  # write tlb entry selected by random
+ 	# eret # eret所作的操作为：
+	 # 将EPC/ErrorEPC的值置入PC，同时清除CP0_Status寄存器的EXL位。
+	 # MIPS下，当Status寄存器的EXL(exception)位为1，即表示处理器进入异常处理，处于特权模式下。
+
 
 .org 0x1000
 start:

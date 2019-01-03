@@ -1,5 +1,5 @@
 #include <driver/vga.h>
-#include <zjunix/fs/fat.h>
+#include <kos/fs/fat.h>
 
 char *cut_front_blank(char *str) {
     char *s = str;

@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <driver/vga.h>
 #include <intr.h>
-#include <zjunix/pc.h>
+#include <kos/pc/sched.h>
 
 void get_time_string(unsigned int ticks_high, unsigned int ticks_low, char *buf) {
     // Divide by 256

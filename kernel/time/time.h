@@ -1,7 +1,7 @@
 #ifndef _TIME_H
 #define _TIME_H
 #include <intr.h>
-#include <zjunix/time.h>
+#include <kos/time.h>
 
 void get_time_string(unsigned int ticks_high, unsigned int ticks_low, char *buf);
 

@@ -1,7 +1,7 @@
 #include "myvi.h"
 #include <driver/ps2.h>
 #include <driver/vga.h>
-#include <zjunix/fs/fat.h>
+#include <kos/fs/fat.h>
 
 extern int cursor_freq;
 int pre_cursor_freq;

@@ -2,10 +2,10 @@
 
 #include <driver/ps2.h>
 #include <driver/vga.h>
-#include <zjunix/fs/fat.h>
-#include <zjunix/pc.h>
-#include <zjunix/slab.h>
-#include <zjunix/utils.h>
+#include <kos/fs/fat.h>
+#include <kos/pc/sched.h>
+#include <kos/mm/slab.h>
+#include <kos/utils.h>
 
 #pragma GCC push_options
 #pragma GCC optimize("O0")

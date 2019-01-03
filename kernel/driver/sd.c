@@ -1,7 +1,7 @@
 #include "sd.h"
 #include <driver/vga.h>
 #include <intr.h>
-#include <zjunix/type.h>
+#include <kos/type.h>
 
 #pragma GCC push_opitons
 #pragma GCC optimize("O0")

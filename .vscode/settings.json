@@ -5,6 +5,7 @@
         "fscache.h": "c",
         "intr.h": "c",
         "arch.h": "c",
-        "sched.h": "c"
+        "sched.h": "c",
+        "vmm.h": "c"
     }
 }
