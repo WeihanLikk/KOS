@@ -1,4 +1,4 @@
-#include <kos/rbtree.h>
+#include <kos/pc/rbtree.h>
 
 static void __rb_rotate_left( struct rb_node *node, struct rb_root *root )
 {

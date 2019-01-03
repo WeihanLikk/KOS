@@ -1,6 +1,10 @@
 {
     "C_Cpp.errorSquiggles": "Enabled",
     "files.associations": {
-        "rbtree.h": "c"
+        "rbtree.h": "c",
+        "fscache.h": "c",
+        "intr.h": "c",
+        "arch.h": "c",
+        "sched.h": "c"
     }
 }

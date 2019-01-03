@@ -12,13 +12,9 @@ static inline void prefetchw( const void *x )
 	;
 }
 
-#ifndef LIST_POISON1
 #define LIST_POISON1 ( (void *)0x00100100 )
-#endif
 
-#ifndef LIST_POISON2
 #define LIST_POISON2 ( (void *)0x00200200 )
-#endif
 
 //hash桶的头结点
 struct hlist_head
@@ -38,7 +34,6 @@ struct hlist_node
 	}
 #define HLIST_HEAD( name ) struct hlist_head name = { .first = NULL }
 #define INIT_HLIST_HEAD( ptr ) ( ( ptr )->first = NULL )
-#define INIT_HLIST_NODE( ptr ) ( ( ptr )->next = NULL, ( ptr )->pprev = NULL )
 
 //初始化hash桶的普通结点
 static inline void INIT_HLIST_NODE( struct hlist_node *h )
@@ -70,9 +65,9 @@ static inline void __hlist_del( struct hlist_node *n )
 
 static inline void hlist_del( struct hlist_node *n )
 {
-	__hlist_del( n );  //删除结点之后，需要将其next域和pprev域设置为无用值
-	n->next = (hlist_node *)LIST_POISON1;
-	n->pprev = (hlist_node **)LIST_POISON2;
+	__hlist_del( n );
+	n->next = LIST_POISON1;
+	n->pprev = LIST_POISON2;
 }
 
 static inline void hlist_del_init( struct hlist_node *n )

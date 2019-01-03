@@ -1,4 +1,4 @@
-#include <include/assert.h>
+#include "assert.h"
 
 void assert( int statement, char *message )
 {

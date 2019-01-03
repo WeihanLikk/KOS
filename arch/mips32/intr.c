@@ -1,5 +1,5 @@
-#include <arch/mips32/intr.h>
-#include <arch/mips32/arch.h>
+#include "intr.h"
+#include "arch.h"
 
 #pragma GCC push_options
 #pragma GCC optimize( "O0" )
@@ -44,7 +44,7 @@ int disable_interrupts()
 	return old;
 }
 
-void do_interrupts( unsigned int status, unsigned int cause, context *pt_context )
+void do_interrupts( unsigned int status, unsigned int cause, struct reg_context *pt_context )
 {
 	int i;
 	int index = cause >> 8;

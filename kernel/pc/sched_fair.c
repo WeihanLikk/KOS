@@ -1,4 +1,4 @@
-#include <kos/sched.h>
+#include <kos/pc/sched.h>
 
 #define WMULT_CONST ( ~0UL )
 #define WMULT_SHIFT 32
@@ -82,7 +82,7 @@ static void update_curr( struct cfs_rq *cfs_rq )
 
 	unsigned long long vruntime;
 
-	curr->exec_max = max( (u64)delta_exec, curr->exec_max );
+	curr->exec_max = max( (unsigned long long)delta_exec, curr->exec_max );
 	curr->sum_exec_runtime += delta_exec;
 
 	cfs_rq->exec_clock += delta_exec;
@@ -194,6 +194,14 @@ static void enqueue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se, int 
 	account_entity_enqueue( cfs_rq, se );
 }
 
+static void __dequeue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )
+{
+	if ( cfs_rq->rb_leftmost == &se->run_node )
+		cfs_rq->rb_leftmost = rb_next( &se->run_node );
+
+	rb_erase( &se->run_node, &cfs_rq->tasks_timeline );
+}
+
 static void dequeue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se, int sleep )
 {
 	update_curr( cfs_rq );
@@ -264,14 +272,6 @@ static void entity_tick( struct cfs_rq *cfs_rq, struct sched_entity *curr )
 		check_preempt_tick( cfs_rq, curr );
 }
 
-static void __dequeue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )
-{
-	if ( cfs_rq->rb_leftmost == &se->run_node )
-		cfs_rq->rb_leftmost = rb_next( &se->run_node );
-
-	rb_erase( &se->run_node, &cfs_rq->tasks_timeline );
-}
-
 static void put_prev_entity( struct cfs_rq *cfs_rq, struct sched_entity *prev )
 {
 	if ( prev->on_rq )
@@ -281,11 +281,6 @@ static void put_prev_entity( struct cfs_rq *cfs_rq, struct sched_entity *prev )
 		__enqueue_entity( cfs_rq, prev );
 	}
 	cfs_rq->current_task = NULL;
-}
-
-static inline struct rb_node *first_fair( struct cfs_rq *cfs_rq )
-{
-	return cfs_rq->rb_leftmost;
 }
 
 static void set_next_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )

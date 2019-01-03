@@ -1,13 +1,43 @@
-#include <kos/sched.h>
-#include <arch/mips32/intr.h>
+#include <kos/pc/sched.h>
+#include <intr.h>
 
 struct list_head wait;
 struct list_head exited;
 
-static void init_cfs_rq( struct cfs_rq *cfs_rq )
+static void copy_context( struct reg_context *src, struct reg_context *dest )
 {
-	cfs_rq->tasks_timeline = RB_ROOT;
-	cfs_rq->min_vruntime = (unsigned long long)( -( 1LL << 20 ) );
+	dest->epc = src->epc;
+	dest->at = src->at;
+	dest->v0 = src->v0;
+	dest->v1 = src->v1;
+	dest->a0 = src->a0;
+	dest->a1 = src->a1;
+	dest->a2 = src->a2;
+	dest->a3 = src->a3;
+	dest->t0 = src->t0;
+	dest->t1 = src->t1;
+	dest->t2 = src->t2;
+	dest->t3 = src->t3;
+	dest->t4 = src->t4;
+	dest->t5 = src->t5;
+	dest->t6 = src->t6;
+	dest->t7 = src->t7;
+	dest->s0 = src->s0;
+	dest->s1 = src->s1;
+	dest->s2 = src->s2;
+	dest->s3 = src->s3;
+	dest->s4 = src->s4;
+	dest->s5 = src->s5;
+	dest->s6 = src->s6;
+	dest->s7 = src->s7;
+	dest->t8 = src->t8;
+	dest->t9 = src->t9;
+	dest->hi = src->hi;
+	dest->lo = src->lo;
+	dest->gp = src->gp;
+	dest->sp = src->sp;
+	dest->fp = src->fp;
+	dest->ra = src->ra;
 }
 
 static void set_load_weight( struct task_struct *p )
@@ -121,21 +151,7 @@ void sched_init()
 	  "mtc0 $zero, $9" );
 }
 
-void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context *pt_context )
-{
-	timeCount++;
-	struct cfs_rq *cfs_rq = get_cfs();
-	struct task_struct *curr = cfs_rq->current_task;
-
-	update_cfs_clock( cfs_rq );
-	//time update
-
-	task_tick_fair( cfs_rq, curr );
-
-	scheduler( pt_context );
-}
-
-void scheduler( struct reg_context *pt_context )
+static void scheduler( struct reg_context *pt_context )
 {
 	struct task_struct *prev, *next;
 	struct cfs_rq *cfs_rq;
@@ -169,6 +185,20 @@ void scheduler( struct reg_context *pt_context )
 		}
 	} while ( need_resched() );
 	//enable_interrupts();
+}
+
+void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context *pt_context )
+{
+	timeCount++;
+	struct cfs_rq *cfs_rq = get_cfs();
+	struct task_struct *curr = cfs_rq->current_task;
+
+	update_cfs_clock( cfs_rq );
+	//time update
+
+	task_tick_fair( cfs_rq, curr );
+
+	scheduler( pt_context );
 }
 
 void sched_fork( struct task_struct *p )
@@ -253,24 +283,7 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	return 1;
 }
 
-int exec( unsigned int argc, void *args, int is_wait )
-{
-	pid_t newpid;
-	int result = task_fork( args, (void *)execproc, argc, args, &newpid, 0 );
-	if ( result != 0 )
-	{
-		kernel_printf( "exec: task created failed!\n" );
-		return 0;
-	}
-
-	if ( is_wait )
-	{
-		//waitpid( newpid );
-	}
-	return 0;
-}
-
-int execproc( unsigned int argc, void *args )
+static int execproc( unsigned int argc, void *args )
 {
 	int count1 = 0, count2 = 0;
 	struct cfs_rq *cfs_rq = get_cfs();
@@ -303,6 +316,23 @@ int execproc( unsigned int argc, void *args )
 	do_exit();
 
 	return 1;
+}
+
+int exec( unsigned int argc, void *args, int is_wait )
+{
+	pid_t newpid;
+	int result = task_fork( args, (void *)execproc, argc, args, &newpid );
+	if ( result != 0 )
+	{
+		kernel_printf( "exec: task created failed!\n" );
+		return 0;
+	}
+
+	if ( is_wait )
+	{
+		//waitpid( newpid );
+	}
+	return 0;
 }
 
 static int try_to_wake_up( struct task_struct *p )
@@ -424,8 +454,14 @@ int pc_kill( pid_t pid )
 	{
 		dequeu_task_fair( cfs_rq, p, 0 );
 	}
+	else
+	{
+		kernel_printf( "Error in kill, why this process is not on cfs_rq?\n" );
+	}
 	add_exited( p );
 	free_pidmap( pid );
+	detach_pid( p );
+
 	enable_interrupts();
 	return 1;
 }

@@ -1,9 +1,9 @@
 #ifndef _SCHED_H
 #define _SCHED_H
 
-#include <kos/rbtree.h>
+#include <kos/pc/rbtree.h>
 #include <kos/kernel.h>
-#include <kos/pid.h>
+#include <kos/pc/pid.h>
 
 #define TASK_RUNNING 0  //进程要么正在执行，要么准备执行
 #define TASK_READY 1
@@ -19,7 +19,8 @@
 // #define current get_current()
 
 // #define get_cfs() &( rq.cfs )
-#define get_cfs() &cfs_rq
+struct cfs_rq my_cfs_rq;
+#define get_cfs() &my_cfs_rq
 
 #define NICE_0_LOAD 1024
 #define MAX_RT_PRIO 100
@@ -234,9 +235,9 @@ union thread_union
 		.prioiry = 120,             \
 	}
 
-struct cfs_rq cfs_rq;
 struct task_struct init_task = INIT_TASK( init_task );
 
+void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context *pt_context );
 void task_tick_fair( struct cfs_rq *cfs_rq, struct task_struct *curr );
 void task_new_fair( struct cfs_rq *cfs_rq, struct task_struct *p );
 void check_preempt_wakeup( struct cfs_rq *cfs_rq, struct task_struct *p );

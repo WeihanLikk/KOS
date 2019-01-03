@@ -1,4 +1,4 @@
-#include <kos/sched.h>
+#include <kos/pc/sched.h>
 
 #define pid_hashfn( x ) hash_long( (unsigned long)x, pidhash_shift )
 

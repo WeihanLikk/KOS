@@ -1,10 +1,10 @@
 #ifndef _KOS_UITILS_H
 #define _KOS_UITILS_H
 
-#define container_of( ptr, type, member ) ( (type *)( (char *)ptr - (char *)&( ( (type *)0 )->member ) ) )
+//#define container_of( ptr, type, member ) ( (type *)( (char *)ptr - (char *)&( ( (type *)0 )->member ) ) )
 
 #include "type.h"
-#include "slab.h"
+#include <kos/mm/slab.h>
 
 void *kernel_memcpy( void *dest, void *src, int len );
 void *kernel_memset( void *dest, int b, int len );

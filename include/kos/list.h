@@ -3,8 +3,12 @@
 
 #include <kos/kernel.h>
 
+#ifndef LIST_POISON1
 #define LIST_POISON1 (void *)0x10101010
+#endif
+#ifndef LIST_POISON2
 #define LIST_POISON2 (void *)0x20202020
+#endif
 
 struct list_head
 {
