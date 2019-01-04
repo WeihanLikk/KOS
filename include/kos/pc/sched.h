@@ -20,7 +20,6 @@
 
 // #define get_cfs() &( rq.cfs )
 extern struct cfs_rq my_cfs_rq;
-#define get_cfs() &my_cfs_rq
 
 #define NICE_0_LOAD 1024
 #define MAX_RT_PRIO 100
@@ -36,7 +35,6 @@ extern struct cfs_rq my_cfs_rq;
 #define KERNEL_STACK_SIZE 4096
 
 #define CLOCK_INTERRUPTER_TICK 10  //msec
-unsigned long timeCount = 0;
 
 static const int prio_to_weight[ 40 ] = {
 	/* -20 */ 88761,
@@ -236,7 +234,16 @@ union thread_union
 		.prioiry = 120,             \
 	}
 
-struct task_struct init_task = INIT_TASK( init_task );
+#define INIT_CFS_RQ( cfs_rq )                                   \
+	{                                                           \
+		.tasks_timeline = RB_ROOT,                              \
+		.min_vruntime = (unsigned long long)( -( 1LL << 20 ) ), \
+		.exec_clock = 0,                                        \
+		.nr_running = 0,                                        \
+		.clock = 1,                                             \
+		.prev_clock_raw = 0,                                    \
+		.clock_max_delta = 0,                                   \
+	}
 
 void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context *pt_context );
 void task_tick_fair( struct cfs_rq *cfs_rq, struct task_struct *curr );
@@ -247,9 +254,12 @@ void dequeu_task_fair( struct cfs_rq *cfs_rq, struct task_struct *p, int sleep )
 void put_prev_task_fair( struct cfs_rq *cfs_rq, struct task_struct *prev );
 struct task_struct *pick_next_task_fair( struct cfs_rq *cfs_rq );
 void sys_prioiry( int increment );
-int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *retpid );
-int exec( unsigned int argc, void *args, int is_wait );
+extern void switch_ex( struct reg_context *regs );
+extern void switch_wa( struct reg_context *des, struct reg_context *src );
+int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *retpid, int is_vm );
+int execk( unsigned int argc, void *args, int is_wait );
 void do_exit();
 int pc_kill( pid_t pid );
 void waitpid( pid_t pid );
+void sched_init();
 #endif

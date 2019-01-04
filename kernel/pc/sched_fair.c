@@ -1,4 +1,5 @@
 #include <kos/pc/sched.h>
+#include <driver/vga.h>
 
 #define WMULT_CONST ( ~0UL )
 #define WMULT_SHIFT 32

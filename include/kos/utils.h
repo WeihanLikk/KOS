@@ -35,5 +35,6 @@ typedef unsigned char *va_list;
 #define va_start( ap, v ) ( ap = (va_list)&v + _INTSIZEOF( v ) )
 #define va_arg( ap, t ) ( *(t *)( ( ap += _INTSIZEOF( t ) ) - _INTSIZEOF( t ) ) )
 #define va_end( ap ) ( ap = (va_list)0 )
+#define UPPER_ALLIGN( x, y ) ( ( ( x ) + ( (y)-1 ) ) & ~( (y)-1 ) )
 
 #endif  // ! _ZJUNIX_UITILS_H

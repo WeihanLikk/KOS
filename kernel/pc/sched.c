@@ -1,8 +1,13 @@
 #include <kos/pc/sched.h>
+#include <kos/vm/vmm.h>
+#include <driver/vga.h>
 #include <intr.h>
 
 struct list_head wait;
 struct list_head exited;
+
+struct task_struct init_task = INIT_TASK( init_task );
+struct cfs_rq my_cfs_rq = INIT_CFS_RQ( my_cfs_rq );
 
 static void copy_context( struct reg_context *src, struct reg_context *dest )
 {
@@ -54,8 +59,7 @@ static void set_load_weight( struct task_struct *p )
 
 static int need_resched()
 {
-	struct cfs_rq *cfs_rq = get_cfs();
-	struct task_struct *p = cfs_rq->current_task;
+	struct task_struct *p = my_cfs_rq.current_task;
 	if ( unlikely( p->THREAD_FLAG == TIF_NEED_RESCHED ) )
 	{
 		return 1;
@@ -86,17 +90,17 @@ static inline struct task_struct *pick_next_task( struct cfs_rq *cfs_rq, struct 
 	}
 }
 
-static void init_cfs_rq( struct cfs_rq *cfs_rq )
-{
-	cfs_rq->tasks_timeline = RB_ROOT;
-	cfs_rq->min_vruntime = (unsigned long long)( -( 1LL << 20 ) );
-	cfs_rq->exec_clock = 0;
-	cfs_rq->nr_running = 0;
-	cfs_rq->clock = 1;
-	cfs_rq->prev_clock_raw = 0;
-	cfs_rq->clock_max_delta = 0;
-	cfs_rq->current_task = &init_task;
-}
+// static void init_cfs_rq( struct cfs_rq *cfs_rq )
+// {
+// 	cfs_rq->tasks_timeline = RB_ROOT;
+// 	cfs_rq->min_vruntime = (unsigned long long)( -( 1LL << 20 ) );
+// 	cfs_rq->exec_clock = 0;
+// 	cfs_rq->nr_running = 0;
+// 	cfs_rq->clock = 1;
+// 	cfs_rq->prev_clock_raw = 0;
+// 	cfs_rq->clock_max_delta = 0;
+// 	cfs_rq->current_task = &init_task;
+// }
 
 static void update_cfs_clock( struct cfs_rq *cfs_rq )
 {
@@ -123,7 +127,7 @@ static void update_cfs_clock( struct cfs_rq *cfs_rq )
 void init_idle( struct task_struct *idle )
 {
 	//
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	cfs_rq->idle = idle;
 	cfs_rq->idle->pid = alloc_pidmap();
 	if ( cfs_rq->idle->pid != 0 )
@@ -135,11 +139,12 @@ void init_idle( struct task_struct *idle )
 }
 void sched_init()
 {
-	init_cfs_rq( get_cfs() );
 	pidhash_initial();
 	pidmap_init();
+
 	set_load_weight( &init_task );
 	init_idle( &init_task );
+	my_cfs_rq.current_task = &init_task;
 
 	INIT_LIST_HEAD( &exited );
 	INIT_LIST_HEAD( &wait );
@@ -154,8 +159,7 @@ void sched_init()
 static void scheduler( struct reg_context *pt_context )
 {
 	struct task_struct *prev, *next;
-	struct cfs_rq *cfs_rq;
-	cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	//disable_interrupts();
 	do
 	{
@@ -189,8 +193,7 @@ static void scheduler( struct reg_context *pt_context )
 
 void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context *pt_context )
 {
-	timeCount++;
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *curr = cfs_rq->current_task;
 
 	update_cfs_clock( cfs_rq );
@@ -221,7 +224,7 @@ void sched_fork( struct task_struct *p )
 
 void wake_up_new_task( struct task_struct *p )
 {
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	update_cfs_clock( cfs_rq );
 
 	task_new_fair( cfs_rq, p );
@@ -232,10 +235,10 @@ void wake_up_new_task( struct task_struct *p )
 	check_preempt_wakeup( cfs_rq, p );
 }
 
-int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *returnpid )
+int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *returnpid, int is_vm )
 {
 	struct task_struct *p;
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	unsigned int init_gp;
 
 	pid_t newpid = alloc_pidmap();
@@ -251,6 +254,15 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	{
 		kernel_printf( "task_struct allocated failed\n" );
 		return 0;
+	}
+
+	if ( is_vm )
+	{
+		p->mm = mm_create();
+	}
+	else
+	{
+		p->mm = 0;
 	}
 
 	p->pid = newpid;
@@ -286,7 +298,7 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 static int execproc( unsigned int argc, void *args )
 {
 	int count1 = 0, count2 = 0;
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *current = cfs_rq->current_task;
 
 	kernel_printf( "\n********execproc start*********\n" );
@@ -315,16 +327,19 @@ static int execproc( unsigned int argc, void *args )
 
 	do_exit();
 
+	kernel_printf( "Error: execproc, do_exit\n" );
+	while ( 1 )
+		;
 	return 1;
 }
 
-int exec( unsigned int argc, void *args, int is_wait )
+int execk( unsigned int argc, void *args, int is_wait )
 {
 	pid_t newpid;
-	int result = task_fork( args, (void *)execproc, argc, args, &newpid );
+	int result = task_fork( args, (void *)execproc, argc, args, &newpid, 1 );
 	if ( result != 0 )
 	{
-		kernel_printf( "exec: task created failed!\n" );
+		kernel_printf( "exec: task created failed\n" );
 		return 0;
 	}
 
@@ -338,7 +353,7 @@ int exec( unsigned int argc, void *args, int is_wait )
 static int try_to_wake_up( struct task_struct *p )
 {
 	int success = 0;
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	if ( p->se.on_rq )
 	{
 		p->state = TASK_RUNNING;
@@ -376,7 +391,7 @@ static void remove_wait( struct task_struct *p )
 
 void do_exit()
 {
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *current = cfs_rq->current_task, *next;
 
 	if ( current->pid == 0 || current->pid == 1 )
@@ -432,7 +447,7 @@ void do_exit()
 //1-success, 0-unsuccess
 int pc_kill( pid_t pid )
 {
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	if ( pid == 0 || pid == 1 || cfs_rq->current_task->pid )
 	{
 		kernel_printf( "Cannot kill this\n" );
@@ -485,7 +500,7 @@ void waitpid( pid_t pid )
 	  "nop\n\t"
 	  "nop\n\t" );
 
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *current = cfs_rq->current_task;
 
 	current->state = TASK_WAITING;
@@ -512,7 +527,7 @@ void waitpid( pid_t pid )
 
 static void set_priority( struct task_struct *p, long prioiry )
 {
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	update_cfs_clock( cfs_rq );
 
 	int on_rq = p->se.on_rq;
@@ -542,7 +557,7 @@ static void set_priority( struct task_struct *p, long prioiry )
 void sys_prioiry( int increment )
 {
 	long prioiry;
-	struct cfs_rq *cfs_rq = get_cfs();
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *current = cfs_rq->current_task;
 	if ( increment < -40 )
 		increment = -40;

@@ -12,9 +12,13 @@ static inline void prefetchw( const void *x )
 	;
 }
 
+#ifndef LIST_POISON1
 #define LIST_POISON1 ( (void *)0x00100100 )
+#endif
 
+#ifndef LIST_POISON2
 #define LIST_POISON2 ( (void *)0x00200200 )
+#endif
 
 //hash桶的头结点
 struct hlist_head
@@ -123,7 +127,7 @@ static inline void hlist_move_list( struct hlist_head *old, struct hlist_head *n
 	old->first = NULL;
 }
 
-unsigned long hash_long( unsigned long val, unsigned int bits )
+static inline unsigned long hash_long( unsigned long val, unsigned int bits )
 {
 	unsigned long hash = val * 0x9e370001UL;
 	return hash >> ( 32 - bits );

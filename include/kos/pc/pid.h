@@ -8,8 +8,15 @@
 #define pid_task( elem ) \
 	list_entry( elem, struct task_struct, pids.pid_list )
 #define PID_MAX_DEFAULT 0x8000 /* max pid, equal to 2^15=32768 */
+
+#ifndef PAGE_SHIFT
 #define PAGE_SHIFT 12
+#endif
+
+#ifndef PAGE_SIZE
 #define PAGE_SIZE ( 1UL << PAGE_SHIFT ) /* page size = 2^12 = 4K */
+#endif
+
 #define BITS_PER_BYTE 8
 //4k*8 32768
 #define BITS_PER_PAGE ( PAGE_SIZE * BITS_PER_BYTE )
@@ -17,6 +24,7 @@
 //0111 1111 1111 1111
 #define BITS_PER_PAGE_MASK ( BITS_PER_PAGE - 1 )
 #define RESERVED_PIDS 10
+#define pid_hashfn( nr ) hash_long( (unsigned long)nr, pidhash_shift )
 typedef int pid_t;
 
 typedef struct pidmap

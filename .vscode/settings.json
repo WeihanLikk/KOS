@@ -6,6 +6,8 @@
         "intr.h": "c",
         "arch.h": "c",
         "sched.h": "c",
-        "vmm.h": "c"
+        "vmm.h": "c",
+        "pid.h": "c",
+        "exc.h": "c"
     }
 }

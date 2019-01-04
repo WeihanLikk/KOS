@@ -1,6 +1,6 @@
 #include <kos/pc/sched.h>
-
-#define pid_hashfn( x ) hash_long( (unsigned long)x, pidhash_shift )
+#include <driver/vga.h>
+#include <kos/mm/bootmm.h>
 
 static pidmap_t pidmap_array[ 100 ];
 static struct hlist_head *pid_hash;
@@ -82,7 +82,7 @@ void free_pidmap( int pid )
 void pidhash_initial()
 {
 	int pidhash_size = 1 << pidhash_shift;  //2048
-	pid_hash = alloc_bootmem( pidhash_size * sizeof( *( pid_hash ) ) );
+	pid_hash = (struct hlist_head *)alloc_bootmem( pidhash_size * sizeof( *( pid_hash ) ) );
 	if ( !pid_hash )
 		kernel_printf( "Could not alloc pidhash!\n" );
 	for ( int i = 0; i < pidhash_size; i++ )
