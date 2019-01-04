@@ -30,7 +30,7 @@ struct mm_struct *mm_create()
 	/*kmalloc or vmalloc the page table of this process*/
 	// mm->pgd = kmalloc(PAGE_SIZE);
 	// mm->pgd = vmalloc(PAGE_SIZE);
-	mm->pgd = PGD_VADDR;
+	mm->pgd = (pgd_t*)PGD_VADDR;
 	if ( !mm->pgd )
 	{
 #ifdef VM_DEBUG
@@ -110,7 +110,7 @@ static void pgd_delete( pgd_t *pgd )
 
 	for ( i = 0; i < 1024; i++ )
 	{
-		ptec = pgd + i * sizeof( pte_t );
+		ptec = (unsigned int)pgd + i * sizeof( pte_t );
 		ptec &= PAGE_MASK;
 		pte = (pte_t *)ptec;
 #ifdef VMA_DEBUG

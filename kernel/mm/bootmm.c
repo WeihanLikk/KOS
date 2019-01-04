@@ -232,7 +232,7 @@ unsigned char *bootmm_alloc_pages( unsigned int size, unsigned int type, unsigne
 	size_inpages = size >> PAGE_SHIFT;
 
 	// in normal case, going forward is most likely to find suitable area
-	res = find_pages( size_inpages, bmm.last_alloc_end + 1, bmm.max_pfn, align >> PAGE_SHIFT );
+	res = find_pages( size_inpages, bmm.last_alloc_end + 1, bmm.max_pfn, align >> PAGE_SHIFT ); //page number, start_addr, 
 	if ( res )
 	{
 		insert_mminfo( &bmm, (unsigned int)res, (unsigned int)res + size - 1, type );
@@ -252,7 +252,7 @@ unsigned char *bootmm_alloc_pages( unsigned int size, unsigned int type, unsigne
 
 unsigned char *alloc_bootmem( unsigned int size )
 {
-	return bootmm_alloc_pages( size, 0, 0 );
+	return bootmm_alloc_pages( size,  _MM_KERNEL, 1 << PAGE_SHIFT );
 }
 
 void bootmap_info( unsigned char *msg )
