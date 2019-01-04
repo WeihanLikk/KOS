@@ -1,7 +1,8 @@
 #include <kos/pc/sched.h>
-#include <kos/vm/vmm.h>
+//#include <kos/vm/vmm.h>
 #include <driver/vga.h>
 #include <intr.h>
+#include <kos/log.h>
 
 struct list_head wait;
 struct list_head exited;
@@ -132,14 +133,14 @@ void init_idle( struct task_struct *idle )
 	cfs_rq->idle->pid = alloc_pidmap();
 	if ( cfs_rq->idle->pid != 0 )
 	{
+		//log( LOG_OK, "Here ka zhu le." );
 		kernel_printf( "idle pid error\n" );
-		while ( 1 )
-			;
+		kernel_printf( "The idle pid: %d\n", cfs_rq->idle->pid );
 	}
 }
 void sched_init()
 {
-	pidhash_initial();
+	//pidhash_initial();
 	pidmap_init();
 
 	set_load_weight( &init_task );
@@ -242,6 +243,7 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	unsigned int init_gp;
 
 	pid_t newpid = alloc_pidmap();
+
 	if ( newpid == -1 )
 	{
 		free_pidmap( newpid );
@@ -287,11 +289,13 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	{
 		*returnpid = newpid;
 	}
-
 	//
-	attach_pid( p, newpid );
+	//attach_pid( p, newpid );
 
+	kernel_printf( "third down\n" );
 	wake_up_new_task( p );
+
+	//kernel_printf( "forth down\n" );
 	return 1;
 }
 

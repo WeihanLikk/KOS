@@ -36,7 +36,7 @@ void create_startup_process()
 	int res;
 
 	res = task_fork( "kernel_shell", (void *)ps, 0, 0, 0, 0 );
-	if ( res != 0 )
+	if ( res == 0 )
 		kernel_printf( "create startup process failed\n" );
 	else
 		kernel_printf( "kernel shell created\n" );

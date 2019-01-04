@@ -12,8 +12,8 @@ int last_pid;
 void pidmap_init()
 {
 	last_pid = -1;
-	pid_map.nr_free = PID_MAX_DEFAULT;
-	for ( int i = 0; i < PAGE_SIZE; i++ )
+	pid_map.nr_free = PID_NUM;
+	for ( int i = 0; i < PID_BYTES; i++ )
 	{
 		pid_map.page[ i ] = 0;
 	}
@@ -81,12 +81,16 @@ void free_pidmap( int pid )
 
 void pidhash_initial()
 {
-	int pidhash_size = 1 << pidhash_shift;  //2048
+	int pidhash_size = 1;
+	//<< 5;  //32
+	//int pidhash_size = 1 << pidhash_shift;  //2048
 	pid_hash = (struct hlist_head *)alloc_bootmem( pidhash_size * sizeof( *( pid_hash ) ) );
+	kernel_printf( "why cannot pass this?\n" );
 	if ( !pid_hash )
 		kernel_printf( "Could not alloc pidhash!\n" );
 	for ( int i = 0; i < pidhash_size; i++ )
 		INIT_HLIST_HEAD( &pid_hash[ i ] );
+	kernel_printf( "Let's try again, why cannot pass this?\n" );
 }
 
 struct pid *find_pid( int nr )

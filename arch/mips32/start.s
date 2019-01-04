@@ -9,8 +9,8 @@
 .set noat
 .align 2
 
+	
 .org 0x0000
-exception:
 	lui $k0, 0x8000
 	sltu $k0, $sp, $k0
 	beq $k0, $zero, tlb_exception_save_context
@@ -21,6 +21,7 @@ exception:
 
 
 .org 0x0180
+exception:
 	lui $k0, 0x8000
 	sltu $k0, $sp, $k0
 	beq $k0, $zero, exception_save_context

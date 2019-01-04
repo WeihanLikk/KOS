@@ -91,6 +91,8 @@ static void update_curr( struct cfs_rq *cfs_rq )
 		delta_exec = calc_delta_mine( delta_exec, &curr->load );
 	curr->vruntime += delta_exec;
 
+	kernel_printf( "here ??\n" );
+
 	if ( first_fair( cfs_rq ) )
 	{
 		vruntime = min_vruntime( curr->vruntime, __pick_next_entity( cfs_rq )->vruntime );
@@ -100,6 +102,7 @@ static void update_curr( struct cfs_rq *cfs_rq )
 		vruntime = curr->vruntime;
 	}
 
+	kernel_printf( "cannot be here ??\n" );
 	cfs_rq->min_vruntime = max_vruntime( cfs_rq->min_vruntime, vruntime );
 
 	curr->exec_start = now;
@@ -341,6 +344,7 @@ void task_new_fair( struct cfs_rq *cfs_rq, struct task_struct *p )
 	struct sched_entity *se = &p->se, *curr = cfs_rq->curr;
 
 	update_curr( cfs_rq );
+	kernel_printf( "Why here!!!!!!!!!\n" );
 	place_entity( cfs_rq, se, 1 );
 
 	if ( curr && curr->vruntime < se->vruntime )
@@ -349,7 +353,9 @@ void task_new_fair( struct cfs_rq *cfs_rq, struct task_struct *p )
 	}
 
 	enqueue_task_fair( cfs_rq, p, 0 );
+	kernel_printf( "here????\n" );
 	resched_task( cfs_rq->current_task );
+	kernel_printf( "Cannot be here????\n" );
 }
 
 void task_tick_fair( struct cfs_rq *cfs_rq, struct task_struct *curr )
