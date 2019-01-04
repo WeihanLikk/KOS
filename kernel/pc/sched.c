@@ -3,6 +3,7 @@
 #include <driver/vga.h>
 #include <intr.h>
 #include <kos/log.h>
+#include <usr/ps.h>
 
 struct list_head wait;
 struct list_head exited;
@@ -111,17 +112,23 @@ static void update_cfs_clock( struct cfs_rq *cfs_rq )
 	  "mfc0 %0, $9, 6\n\t"
 	  "mfc0 %1, $9, 7\n\t"
 	  : "=r"( ticks_low ), "=r"( ticks_high ) );
+
 	unsigned long long now = ticks_high;
 	now << 32;
 	now += ticks_low;
+
+	kernel_printf( "Error in cfs_clock1\n" );
 	// unsigned long long now = timeCount * CLOCK_INTERRUPTER_TICK;
 	signed long long delta = now - prev_clock;
 	unsigned long long clock = cfs_rq->clock;
+
+	kernel_printf( "Error in cfs_clock2\n" );
 
 	if ( unlikely( delta > cfs_rq->clock_max_delta ) )
 		cfs_rq->clock_max_delta = delta;
 	clock += delta;
 
+	kernel_printf( "Error in cfs_clock3\n" );
 	cfs_rq->prev_clock_raw = now;
 	cfs_rq->clock = clock;
 }
@@ -138,6 +145,58 @@ void init_idle( struct task_struct *idle )
 		kernel_printf( "The idle pid: %d\n", cfs_rq->idle->pid );
 	}
 }
+
+static void create_shell_process()
+{
+	struct task_struct *p;
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
+	unsigned int init_gp;
+
+	pid_t newpid = alloc_pidmap();
+
+	if ( newpid == -1 )
+	{
+		free_pidmap( newpid );
+		kernel_printf( "pid allocated failed\n" );
+		return 0;
+	}
+
+	p = (struct task_struct *)kmalloc( sizeof( struct task_struct ) );
+	if ( p == 0 )
+	{
+		kernel_printf( "task_struct allocated failed\n" );
+		return 0;
+	}
+
+	p->pid = newpid;
+	p->parent = cfs_rq->idle->pid;
+	p->policy = SCHED_NORMAL;
+	p->prioiry = cfs_rq->idle->prioiry;
+	p->THREAD_FLAG = 0;
+
+	sched_fork( p );
+
+	kernel_strcpy( p->name, "shell" );
+
+	kernel_memset( &( p->context ), 0, sizeof( struct reg_context ) );
+
+	void( *entry ) = (void *)ps;
+	p->context.epc = (unsigned int)entry;
+	asm volatile( "la %0, _gp\n\t"
+				  : "=r"( init_gp ) );
+	p->context.gp = init_gp;
+	p->context.a0 = 0;
+	p->context.a1 = 0;
+	//
+	//attach_pid( p, newpid );
+
+	cfs_rq->current_task = p;
+	cfs_rq->curr = &p->se;
+	wake_up_new_task( p );
+
+	kernel_printf( "kernel shell created\n" );
+}
+
 void sched_init()
 {
 	//pidhash_initial();
@@ -155,6 +214,8 @@ void sched_init()
 	  "li $v0, 1000000\n\t"
 	  "mtc0 $v0, $11\n\t"
 	  "mtc0 $zero, $9" );
+
+	create_shell_process();
 }
 
 static void scheduler( struct reg_context *pt_context )

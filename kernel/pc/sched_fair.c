@@ -79,19 +79,26 @@ static void update_curr( struct cfs_rq *cfs_rq )
 	struct sched_entity *curr = cfs_rq->curr;
 	unsigned long long now = cfs_rq->clock;  // ori from rq -> clock
 	unsigned long delta_exec;
+	kernel_printf( "0here ??\n" );
+	kernel_printf( "now: %d\n", now );
+	kernel_printf( "execstart: %d\n", curr->exec_start );
 	delta_exec = (unsigned long)( now - curr->exec_start );
+
+	kernel_printf( "1here ??\n" );
 
 	unsigned long long vruntime;
 
 	curr->exec_max = max( (unsigned long long)delta_exec, curr->exec_max );
 	curr->sum_exec_runtime += delta_exec;
 
+	kernel_printf( "2here ??\n" );
+
 	cfs_rq->exec_clock += delta_exec;
 	if ( unlikely( curr->load.weight != NICE_0_LOAD ) )
 		delta_exec = calc_delta_mine( delta_exec, &curr->load );
 	curr->vruntime += delta_exec;
 
-	kernel_printf( "here ??\n" );
+	kernel_printf( "3here ??\n" );
 
 	if ( first_fair( cfs_rq ) )
 	{

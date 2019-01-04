@@ -13,7 +13,6 @@
 #include <kos/tlbload.h>
 #include <kos/syscall.h>
 #include <kos/time.h>
-#include "../usr/ps.h"
 
 void machine_info()
 {
@@ -76,7 +75,7 @@ void init_kernel()
 	// Process control
 	log( LOG_START, "Process Control Module." );
 	sched_init();
-	create_startup_process();
+	//create_startup_process();
 	log( LOG_END, "Process Control Module." );
 	// Interrupts
 	log( LOG_START, "Enable Interrupts." );
