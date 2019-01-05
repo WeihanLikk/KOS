@@ -21,6 +21,10 @@
 
 // #define get_cfs() &( rq.cfs )
 extern struct cfs_rq my_cfs_rq;
+extern struct task_struct idle_task;
+extern int xxxxxxxxxxxxxxx;
+
+//#define current() ( my_cfs_rq.current_task )
 
 #define NICE_0_LOAD 1024
 #define MAX_RT_PRIO 100
@@ -148,8 +152,8 @@ struct cfs_rq
 {
 	struct load_weight load;
 	unsigned long nr_running;
-	unsigned long long exec_clock;
-	unsigned long long min_vruntime;
+	unsigned long exec_clock;
+	unsigned long min_vruntime;
 
 	struct rb_root tasks_timeline;
 	struct rb_node *rb_leftmost;
@@ -159,8 +163,8 @@ struct cfs_rq
 	struct task_struct *current_task;
 	struct task_struct *idle;
 
-	unsigned long long clock;
-	unsigned long long prev_clock_raw;
+	unsigned long clock;
+	unsigned long prev_clock_raw;
 	unsigned long clock_max_delta;
 };
 
@@ -176,13 +180,13 @@ struct sched_entity
 	struct rb_node run_node;
 	unsigned int on_rq;
 
-	unsigned long long exec_start;
-	unsigned long long sum_exec_runtime;
-	unsigned long long vruntime;
-	unsigned long long prev_sum_exec_runtime;
-	unsigned long long exec_max;
-	unsigned long long wait_start;
-	unsigned long long wait_max;
+	unsigned long exec_start;
+	unsigned long sum_exec_runtime;
+	unsigned long vruntime;
+	unsigned long prev_sum_exec_runtime;
+	unsigned long exec_max;
+	unsigned long wait_start;
+	unsigned long wait_max;
 
 	struct cfs_rq *cfs_rq;
 };
@@ -224,27 +228,28 @@ union thread_union
 	//unsigned long stack[ PAGE_SIZE / sizeof( long ) ];
 };
 
-#define INIT_TASK( tsk )            \
-	{                               \
-		.name = "idle",             \
-		.state = TASK_RUNNING_IDLE, \
-		.THREAD_FLAG = 0,           \
-		.pid = 0,                   \
-		.parent = 0,                \
-		.policy = SCHED_IDLE,       \
-		.prioiry = 120,             \
-	}
+// #define INIT_TASK( tsk )            \
+// 	{                               \
+// 		.name = "idle",             \
+// 		.state = TASK_RUNNING_IDLE, \
+// 		.THREAD_FLAG = 0,           \
+// 		.pid = 0,                   \
+// 		.parent = 0,                \
+// 		.policy = SCHED_IDLE,       \
+// 		.prioiry = 120,             \
+// 	}
 
-#define INIT_CFS_RQ( cfs_rq )                                   \
-	{                                                           \
-		.tasks_timeline = RB_ROOT,                              \
-		.min_vruntime = (unsigned long long)( -( 1LL << 20 ) ), \
-		.exec_clock = 0,                                        \
-		.nr_running = 0,                                        \
-		.clock = 1,                                             \
-		.prev_clock_raw = 0,                                    \
-		.clock_max_delta = 0,                                   \
-	}
+// #define INIT_CFS_RQ( cfs_rq )                                   \
+// 	{                                                           \
+// 		.tasks_timeline = RB_ROOT,                              \
+// 		.min_vruntime = (unsigned long long)( -( 1LL << 20 ) ), \
+// 		.exec_clock = 0,                                        \
+// 		.nr_running = 0,                                        \
+// 		.clock = 1,                                             \
+// 		.prev_clock_raw = 0,                                    \
+// 		.clock_max_delta = 0,                                   \
+// 		.load.weight = 0,                                       \
+// 	}
 
 void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context *pt_context );
 void task_tick_fair( struct cfs_rq *cfs_rq, struct task_struct *curr );
@@ -263,4 +268,6 @@ void do_exit();
 int pc_kill( pid_t pid );
 void waitpid( pid_t pid );
 void sched_init();
+
+int xxx;
 #endif
