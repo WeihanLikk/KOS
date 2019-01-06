@@ -144,14 +144,18 @@ void init_slab()
 {
 	unsigned int i;
 	struct kmem_cache *tmp_cache;
-	cache_chain = tmp_cache;
-	kernel_printf( "cache_chain = tmp_chache\n" );
-	for ( i = 0; i < PAGE_SHIFT; i++ )
+	cache_chain = &( kmalloc_caches[ 0 ] );
+	kernel_printf( "kmalloc_caches[ 0 ]\n" );
+	init_cache( &( kmalloc_caches[ 0 ] ), size_kmem_cache[ 0 ], 1 );
+	kernel_printf( "init_cache[0]\n" );
+	for ( i = 1; i < PAGE_SHIFT; i++ )
 	{
 		init_cache( &( kmalloc_caches[ i ] ), size_kmem_cache[ i ], 1 );
-		kernel_printf( "in for\n" );
-		tmp_cache->next = &( kmalloc_caches[ i ] );
-		tmp_cache = &( kmalloc_caches[ i ] );
+#ifdef SLAB_DEBUG
+		kernel_printf( "in for:%x\n", i );
+#endif  // ! SLAB_DEBUG
+		( kmalloc_caches[ i - 1 ] ).next = &( kmalloc_caches[ i ] );
+		//tmp_cache = &( kmalloc_caches[ i ] );
 	}
 #ifdef SLAB_DEBUG
 	kernel_printf( "Setup Slub ok :\n" );
