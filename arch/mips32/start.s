@@ -25,8 +25,8 @@ exception:
 	lui $k0, 0x8000
 	sltu $k0, $sp, $k0
 	beq $k0, $zero, exception_save_context
-	move $k1, $sp
-	la  $k0, kernel_sp	
+	move $k1, $sp # if in user mode
+	la  $k0, kernel_sp # jump to 8100 0000	
 	j exception_save_context
 	lw  $sp, 0($k0)
 

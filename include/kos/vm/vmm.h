@@ -8,8 +8,9 @@ struct mm_struct
 {
 	/*对进程整个用户空间进行描述*/
 	struct vm_area_struct *mmap;		// list of VMAs
-	struct vm_area_struct *mmap_cache;  // Latest used VMA (last find_vma result)
+	struct vm_area_struct *mmap_cache;  // Latest used VMA
 	struct mm_rb_root *mm_rb;			// Red-Black Tree
+
 	pgd_t *pgd;							// The Base Address of the Process' Page Didetory
 	atomic_t mm_users;					// number of users with this user space
 	atomic_t mm_count;					// number of references to "struct mm_struct" (users count as 1)

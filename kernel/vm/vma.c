@@ -14,15 +14,16 @@
 #define PROT_NONE 0x0
 
 // Find the first vma with ending address greater than addr
+// 搜索第一个vm_end大于addr的内存区域（寻找第一个包含addr或vm_start大于addr的区域）
 static struct vm_area_struct *find_vma( struct mm_struct *mm, unsigned long addr, int way )
 {  // way==0，链表实现；way==1，红黑树实现
 	struct vm_area_struct *vma = 0;
 
 	if ( !mm )
 	{
-#ifdef VM_DEBUG
-		kernel_printf( "In find_vma: mm does not exist.\n", mm );
-#endif  //VM_DEBUG
+	#ifdef VM_DEBUG
+			kernel_printf( "In find_vma: mm does not exist.\n", mm );
+	#endif  //VM_DEBUG
 		return 0;
 	}
 	//先找cache，若正是，就返回
@@ -40,10 +41,8 @@ static struct vm_area_struct *find_vma( struct mm_struct *mm, unsigned long addr
 	else if ( way == 0 )
 	{
 		vma = mm->mmap;
-		while ( vma )
-		{
-			if ( vma->vm_end > addr )
-			{
+		while ( vma ){
+			if ( vma->vm_end > addr ){
 				mm->mmap_cache = vma;
 				break;
 			}

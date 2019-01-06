@@ -10,9 +10,9 @@
 #define RED 0	// 红色节点
 #define BLACK 1  // 黑色节点
 
+/* 红黑树的节点*/
 typedef struct RBTreeNode
 {
-	// 红黑树的节点
 	int color;  // 颜色(RED 或 BLACK) 0 or 1
 	struct vm_area_struct *vma;
 	struct RBTreeNode *left;	// 左孩子
@@ -25,7 +25,7 @@ struct mm_rb_root
 	// 红黑树的根
 	Node *node;
 };
-
+// 红黑树的节点
 /*将rb_node加入红黑树root中,插入成功，返回0；失败返回-1
   have considered the situation that root has not mount any node.*/
 int insert_rbtree( struct mm_rb_root *root, Node *rb_node );

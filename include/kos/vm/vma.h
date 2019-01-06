@@ -41,9 +41,10 @@ struct vm_list_struct {
 };
 
 struct vm_operations_struct{
-	void (*open)(struct vm_area_struct * area);
+	void (*open)(struct vm_area_struct * area); 
 	void (*close)(struct vm_area_struct * area);
-	struct page * (*nopage)(struct vm_area_struct * area, unsigned long address, int *type);
+	struct page * (*nopage)(struct vm_area_struct * area, unsigned long address, int *type); 
+	/*when pages which are not in pysical memory are accessed*/
 	void (*swapin)(struct vm_area_struct * area);
 	void (*swapout)(struct vm_area_struct * area);
 	void (*protect)(struct vm_area_struct * area);
