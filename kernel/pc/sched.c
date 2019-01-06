@@ -159,7 +159,7 @@ static void wake_up_new_task( struct task_struct *p )
 	kernel_printf( "check the curr execstart2: %d\n", cfs_rq->curr->exec_start );
 	task_new_fair( cfs_rq, p );
 
-	cfs_rq->nr_running++;
+	//cfs_rq->nr_running++;
 	cfs_rq->load.weight += p->se.load.weight;
 
 	check_preempt_wakeup( cfs_rq, p );
@@ -179,7 +179,14 @@ static void wake_up_new_task( struct task_struct *p )
 // 	}
 // }
 
-static void create_shell_process()
+static void testtest( unsigned int argc, void *args )
+{
+	kernel_printf( "HERe !!!!!!!!!\n" );
+	while ( 1 )
+		;
+}
+
+static void create_shell_process( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *returnpid, int is_vm )
 {
 	struct task_struct *p;
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
@@ -222,7 +229,8 @@ static void create_shell_process()
 
 	kernel_printf( "Down here3\n" );
 
-	void( *entry ) = (void *)ps;
+	//void( *entry ) = (void *)ps;
+	//void( *entry ) = (void *)testtest;
 	p->context.epc = (unsigned int)entry;
 	asm volatile( "la %0, _gp\n\t"
 				  : "=r"( init_gp ) );
@@ -230,7 +238,7 @@ static void create_shell_process()
 	p->context.a0 = 0;
 	p->context.a1 = 0;
 
-	attach_pid( p, newpid );
+	//attach_pid( p, newpid );
 
 	kernel_printf( "Down here4\n" );
 
@@ -276,10 +284,6 @@ static void init_cfs_rq( struct cfs_rq *rq )
 	kernel_printf( "check rq: %d\n", rq->clock );
 }
 
-void asdasd()
-{
-}
-
 void sched_init()
 {
 	pidhash_initial();
@@ -301,13 +305,13 @@ void sched_init()
 	INIT_LIST_HEAD( &exited );
 	INIT_LIST_HEAD( &wait );
 
-	create_shell_process();
+	create_shell_process( "shell", (void *)ps, 0, 0, 0, 0 );
 
-	// register_interrupt_handler( 7, scheduler_tick );
-	// asm volatile(
-	//   "li $v0, 1000000\n\t"
-	//   "mtc0 $v0, $11\n\t"
-	//   "mtc0 $zero, $9" );
+	register_interrupt_handler( 7, scheduler_tick );
+	asm volatile(
+	  "li $v0, 1000000\n\t"
+	  "mtc0 $v0, $11\n\t"
+	  "mtc0 $zero, $9" );
 
 	kernel_printf( "sched init down\n" );
 }
@@ -323,6 +327,8 @@ static void scheduler( struct reg_context *pt_context )
 		update_cfs_clock( cfs_rq );
 		clear_tsk_need_resched( prev );
 
+		kernel_printf( "Check the nr %d\n", cfs_rq->nr_running );
+
 		if ( unlikely( !cfs_rq->nr_running ) )
 		{
 			kernel_printf( "I am idle\n" );
@@ -331,6 +337,9 @@ static void scheduler( struct reg_context *pt_context )
 		}
 		else if ( cfs_rq->nr_running == 1 )
 		{
+			kernel_printf( "I am in nr == 1\n" );
+			copy_context( &( cfs_rq->current_task->context ), pt_context );
+
 			break;
 		}
 
