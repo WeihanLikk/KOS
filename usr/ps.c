@@ -1,4 +1,4 @@
-#include "ps.h"
+#include <kos/ps.h>
 #include <driver/ps2.h>
 #include <driver/sd.h>
 #include <driver/vga.h>

@@ -13,7 +13,6 @@
 #include <kos/tlbload.h>
 #include <kos/syscall.h>
 #include <kos/time.h>
-#include "../usr/ps.h"
 
 void machine_info()
 {
@@ -31,16 +30,16 @@ void machine_info()
 
 #pragma GCC push_options
 #pragma GCC optimize( "O0" )
-void create_startup_process()
-{
-	int res;
+// void create_startup_process()
+// {
+// 	int res;
 
-	res = task_fork( "kernel_shell", (void *)ps, 0, 0, 0, 0 );
-	if ( res == 0 )
-		kernel_printf( "create startup process failed\n" );
-	else
-		kernel_printf( "kernel shell created\n" );
-}
+// 	res = task_fork( "kernel_shell", (void *)ps, 0, 0, 0, 0 );
+// 	if ( res == 0 )
+// 		kernel_printf( "create startup process failed\n" );
+// 	else
+// 		kernel_printf( "kernel shell created\n" );
+// }
 #pragma GCC pop_options
 
 void init_kernel()
@@ -76,12 +75,14 @@ void init_kernel()
 	// Process control
 	log( LOG_START, "Process Control Module." );
 	sched_init();
-	create_startup_process();
+	//create_startup_process();
 	log( LOG_END, "Process Control Module." );
 	// Interrupts
 	log( LOG_START, "Enable Interrupts." );
 	init_interrupts();
+
 	log( LOG_END, "Enable Interrupts." );
+
 	// Init finished
 	machine_info();
 	*GPIO_SEG = 0x11223344;

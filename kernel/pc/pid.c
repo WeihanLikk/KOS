@@ -17,6 +17,7 @@ void pidmap_init()
 	{
 		pid_map.page[ i ] = 0;
 	}
+	kernel_printf( "check pid map\n" );
 }
 
 int find_next_zero_bit( void *addr, int size, int offset )
@@ -81,16 +82,27 @@ void free_pidmap( int pid )
 
 void pidhash_initial()
 {
-	int pidhash_size = 1;
-	//<< 5;  //32
+	//int pidhash_size = 1;
+	int pidhash_size = 1 << 5;  //32
 	//int pidhash_size = 1 << pidhash_shift;  //2048
-	pid_hash = (struct hlist_head *)alloc_bootmem( pidhash_size * sizeof( *( pid_hash ) ) );
-	kernel_printf( "why cannot pass this?\n" );
+	unsigned char *p = alloc_bootmem( pidhash_size * sizeof( *( pid_hash ) ) );
+	pid_hash = (struct hlist_head *)( (unsigned int)p | 0x80000000 );
+	//kernel_printf( "why cannot pass this?\n" );
+	// kernel_printf( "%x\n", pid_hash );
+
+	// *p = 0x12;
+	// kernel_printf( "content: %x", *p );
 	if ( !pid_hash )
 		kernel_printf( "Could not alloc pidhash!\n" );
+
+	// for ( int i = 0; i < pidhash_size; i++ )
+	// {
+	// 	kernel_printf( "%x: %x\n", i, pid_hash[ i ] );
+	// }
 	for ( int i = 0; i < pidhash_size; i++ )
 		INIT_HLIST_HEAD( &pid_hash[ i ] );
-	kernel_printf( "Let's try again, why cannot pass this?\n" );
+
+	//kernel_printf( "Let's try again, why cannot pass this?\n" );
 }
 
 struct pid *find_pid( int nr )
@@ -98,8 +110,10 @@ struct pid *find_pid( int nr )
 	struct hlist_node *elem;
 	struct pid *pid;
 
+	kernel_printf( "Maybe here\n" );
 	hlist_for_each_entry( pid, elem, &pid_hash[ pid_hashfn( nr ) ], pid_chain )
 	{
+		kernel_printf( "Maybe 12312\n" );
 		if ( pid->nr == nr )
 			return pid;
 	}
@@ -123,10 +137,13 @@ void attach_pid( struct task_struct *task, int nr )
 	task_pid = &( task->pids );
 
 	pid = find_pid( nr );
+	kernel_printf( " i am here 0\n" );
 	if ( pid == NULL )
 	{
 		hlist_add_head( &( task_pid->pid_chain ), &pid_hash[ pid_hashfn( nr ) ] );
+		kernel_printf( " i am here 1\n" );
 		INIT_LIST_HEAD( &task_pid->pid_list );
+		kernel_printf( " i am here 2\n" );
 	}
 	else
 	{

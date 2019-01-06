@@ -13,6 +13,10 @@ static unsigned int sched_nr_latency = 5;  //sysctl_sched_latency / sysctl_sched
 
 static inline struct rb_node *first_fair( struct cfs_rq *cfs_rq )
 {
+	if ( cfs_rq->rb_leftmost == NULL )
+	{
+		kernel_printf( "In first_fair\n" );
+	}
 	return cfs_rq->rb_leftmost;
 }
 
@@ -21,7 +25,7 @@ static struct sched_entity *__pick_next_entity( struct cfs_rq *cfs_rq )
 	return rb_entry( first_fair( cfs_rq ), struct sched_entity, run_node );
 }
 
-static inline unsigned long long max_vruntime( unsigned long long max_vruntime, unsigned long long vruntime )
+static inline unsigned long max_vruntime( unsigned long max_vruntime, unsigned long vruntime )
 {
 	signed long long delta = (signed long long)( vruntime - max_vruntime );
 	if ( delta > 0 )
@@ -30,7 +34,7 @@ static inline unsigned long long max_vruntime( unsigned long long max_vruntime, 
 	return max_vruntime;
 }
 
-static inline unsigned long long min_vruntime( unsigned long long min_vruntime, unsigned long long vruntime )
+static inline unsigned long min_vruntime( unsigned long min_vruntime, unsigned long vruntime )
 {
 	signed long long delta = (signed long long)( vruntime - min_vruntime );
 	if ( delta < 0 )
@@ -41,11 +45,11 @@ static inline unsigned long long min_vruntime( unsigned long long min_vruntime, 
 
 static unsigned long calc_delta_mine( unsigned long delta_exec, struct load_weight *lw )
 {
-	unsigned long long temp;
+	unsigned long temp;
 	if ( unlikely( !lw->inv_weight ) )
 		lw->inv_weight = ( WMULT_CONST - lw->weight / 2 ) / lw->weight + 1;
 
-	temp = (unsigned long long)delta_exec * NICE_0_LOAD;
+	temp = (unsigned long)delta_exec * NICE_0_LOAD;
 
 	if ( unlikely( temp > WMULT_CONST ) )
 		temp = SRR( SRR( temp, WMULT_SHIFT / 2 ) * lw->inv_weight,
@@ -53,14 +57,14 @@ static unsigned long calc_delta_mine( unsigned long delta_exec, struct load_weig
 	else
 		temp = SRR( temp * lw->inv_weight, WMULT_SHIFT );
 
-	return (unsigned long)min( temp, (unsigned long long)(unsigned long)LONG_MAX );
+	return (unsigned long)min( temp, (unsigned long)LONG_MAX );
 }
 
-static unsigned long long sched_vslice_add( struct cfs_rq *cfs_rq, struct sched_entity *se )
+static unsigned long sched_vslice_add( struct cfs_rq *cfs_rq, struct sched_entity *se )
 {
 	unsigned long nr_running = cfs_rq->nr_running + 1;
-	unsigned long long period = sysctl_sched_latency;  // 20ms
-	unsigned long nr_latency = sched_nr_latency;	   // 5
+	unsigned long period = sysctl_sched_latency;  // 20ms
+	unsigned long nr_latency = sched_nr_latency;  // 5
 
 	if ( unlikely( nr_running > nr_latency ) )
 	{
@@ -68,7 +72,7 @@ static unsigned long long sched_vslice_add( struct cfs_rq *cfs_rq, struct sched_
 		do_div( period, nr_latency );
 	}
 
-	unsigned long long vslice = period;
+	unsigned long vslice = period;
 	vslice *= NICE_0_LOAD;
 	do_div( vslice, cfs_rq->load.weight + se->load.weight );  //cfs_rq->load.weight don't know if needed!
 	return vslice;
@@ -77,24 +81,31 @@ static unsigned long long sched_vslice_add( struct cfs_rq *cfs_rq, struct sched_
 static void update_curr( struct cfs_rq *cfs_rq )
 {
 	struct sched_entity *curr = cfs_rq->curr;
-	unsigned long long now = cfs_rq->clock;  // ori from rq -> clock
+	unsigned long now = cfs_rq->clock;  // ori from rq -> clock
 	unsigned long delta_exec;
+	kernel_printf( "now in update_curr: %d\n", now );
+	//kernel_printf( "check the curr execstart4: %d\n", my_cfs_rq.curr->exec_start );
 	delta_exec = (unsigned long)( now - curr->exec_start );
 
-	unsigned long long vruntime;
+	//kernel_printf( "1here ??\n" );
 
-	curr->exec_max = max( (unsigned long long)delta_exec, curr->exec_max );
+	unsigned long vruntime;
+
+	curr->exec_max = max( (unsigned long)delta_exec, curr->exec_max );
 	curr->sum_exec_runtime += delta_exec;
+
+	//kernel_printf( "2here ??\n" );
 
 	cfs_rq->exec_clock += delta_exec;
 	if ( unlikely( curr->load.weight != NICE_0_LOAD ) )
 		delta_exec = calc_delta_mine( delta_exec, &curr->load );
 	curr->vruntime += delta_exec;
 
-	kernel_printf( "here ??\n" );
+	//kernel_printf( "3here ??\n" );
 
 	if ( first_fair( cfs_rq ) )
 	{
+		kernel_printf( "cannot be here\n" );
 		vruntime = min_vruntime( curr->vruntime, __pick_next_entity( cfs_rq )->vruntime );
 	}
 	else
@@ -102,16 +113,17 @@ static void update_curr( struct cfs_rq *cfs_rq )
 		vruntime = curr->vruntime;
 	}
 
-	kernel_printf( "cannot be here ??\n" );
+	//kernel_printf( "cannot be here ??\n" );
 	cfs_rq->min_vruntime = max_vruntime( cfs_rq->min_vruntime, vruntime );
 
 	curr->exec_start = now;
+	kernel_printf( "Update_curr down\n" );
 	//xgroup
 }
 
 static void place_entity( struct cfs_rq *cfs_rq, struct sched_entity *se, int initial )
 {
-	unsigned long long vruntime;
+	unsigned long vruntime;
 	vruntime = cfs_rq->min_vruntime;
 	if ( initial )
 	{
@@ -126,7 +138,7 @@ static void place_entity( struct cfs_rq *cfs_rq, struct sched_entity *se, int in
 	se->vruntime = vruntime;
 }
 
-static inline unsigned long long entity_key( struct cfs_rq *cfs_rq, struct sched_entity *se )
+static inline unsigned long entity_key( struct cfs_rq *cfs_rq, struct sched_entity *se )
 {
 	return se->vruntime - cfs_rq->min_vruntime;
 }
@@ -152,8 +164,9 @@ static void __enqueue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )
 	struct rb_node **link = &cfs_rq->tasks_timeline.rb_node;
 	struct rb_node *parent = NULL;
 	struct sched_entity *temp_entry;
-	unsigned long long key = se->vruntime - cfs_rq->min_vruntime;
+	unsigned long key = se->vruntime - cfs_rq->min_vruntime;
 	int leftmost = 1;
+
 	while ( *link )
 	{
 		parent = *link;
@@ -172,10 +185,9 @@ static void __enqueue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )
 		{
 			cfs_rq->rb_leftmost = &se->run_node;
 		}
-
-		rb_link_node( &se->run_node, parent, link );
-		rb_insert_color( &se->run_node, &cfs_rq->tasks_timeline );
 	}
+	rb_link_node( &se->run_node, parent, link );
+	rb_insert_color( &se->run_node, &cfs_rq->tasks_timeline );
 }
 
 static void enqueue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se, int wakeup )
@@ -193,6 +205,7 @@ static void enqueue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se, int 
 
 	if ( se != cfs_rq->curr )
 	{
+		kernel_printf( "Into the _enqueue_entiyt\n" );
 		__enqueue_entity( cfs_rq, se );
 	}
 	account_entity_enqueue( cfs_rq, se );
@@ -242,9 +255,9 @@ static inline void resched_task( struct task_struct *p )
 	//task_thread_info( p )->flag = TIF_NEED_RESCHED;
 }
 
-static unsigned long long sched_slice( struct cfs_rq *cfs_rq, struct sched_entity *se )
+static unsigned long sched_slice( struct cfs_rq *cfs_rq, struct sched_entity *se )
 {
-	unsigned long long slice = sysctl_sched_latency;
+	unsigned long slice = sysctl_sched_latency;
 	unsigned long nr_latency = sched_nr_latency;
 	if ( unlikely( cfs_rq->nr_running > nr_latency ) )
 	{
@@ -296,6 +309,7 @@ static void set_next_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )
 		__dequeue_entity( cfs_rq, se );
 	}
 
+	kernel_printf( "I am hehre !QSDAsd\n" );
 	se->exec_start = cfs_rq->clock;
 	cfs_rq->curr = se;
 
@@ -305,7 +319,7 @@ static void set_next_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )
 static struct sched_entity *pick_next_entity( struct cfs_rq *cfs_rq )
 {
 	struct sched_entity *se = NULL;
-
+	//kernel_printf( "the name: %s", cfs_rq->current_task->name );
 	if ( first_fair( cfs_rq ) )
 	{
 		se = __pick_next_entity( cfs_rq );
@@ -314,6 +328,8 @@ static struct sched_entity *pick_next_entity( struct cfs_rq *cfs_rq )
 	else
 	{
 		kernel_printf( "Here returns a null in pick_next_entity\n" );
+		while ( 1 )
+			;
 	}
 
 	return se;
@@ -342,20 +358,19 @@ void check_preempt_wakeup( struct cfs_rq *cfs_rq, struct task_struct *p )
 void task_new_fair( struct cfs_rq *cfs_rq, struct task_struct *p )
 {
 	struct sched_entity *se = &p->se, *curr = cfs_rq->curr;
-
+	//kernel_printf( "check the curr execstart3: %d\n", my_cfs_rq.curr->exec_start );
+	//kernel_printf( "check the curr execstart3: %d\n", cfs_rq->curr->exec_start );
 	update_curr( cfs_rq );
-	kernel_printf( "Why here!!!!!!!!!\n" );
 	place_entity( cfs_rq, se, 1 );
 
 	if ( curr && curr->vruntime < se->vruntime )
 	{
 		swap( curr->vruntime, se->vruntime );
 	}
-
 	enqueue_task_fair( cfs_rq, p, 0 );
-	kernel_printf( "here????\n" );
 	resched_task( cfs_rq->current_task );
-	kernel_printf( "Cannot be here????\n" );
+
+	kernel_printf( "task_new_fair down\n" );
 }
 
 void task_tick_fair( struct cfs_rq *cfs_rq, struct task_struct *curr )
