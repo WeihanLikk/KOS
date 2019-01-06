@@ -1,6 +1,10 @@
 #ifndef _ZJUNIX_BOOTMM_H
 #define _ZJUNIX_BOOTMM_H
 
+#include <kos/mm/page.h>
+
+#define MAX_DATA 10
+
 extern unsigned char __end[];
 
 enum mm_usage
@@ -15,50 +19,44 @@ enum mm_usage
 	_MM_COUNT
 };
 
-// record every part of mm's information
-struct bootmm_info
-{
-	unsigned int start;
-	unsigned int end;
-	unsigned int type;
+/* record mm's data sections */
+struct bootmm_info {
+    unsigned int start;
+    unsigned int end;
+    unsigned int type;
 };
-// typedef struct bootmm_info * p_mminfo;
 
-// 4K per page
-#define PAGE_SHIFT 12
-#define PAGE_FREE 0x00
-#define PAGE_USED 0xff
+typedef struct bootmm_info * p_mminfo;
 
-#define PAGE_ALIGN ( ~( ( 1 << PAGE_SHIFT ) - 1 ) )
-
-#define MAX_INFO 10
 
 struct bootmm
 {
 	unsigned int phymm;	// the actual physical memory
 	unsigned int max_pfn;  // record the max page number
-	unsigned char *s_map;  // map begin place
-	unsigned char *e_map;
-	unsigned int last_alloc_end;
-	unsigned int cnt_infos;  // get number of infos stored in bootmm now
-	struct bootmm_info info[ MAX_INFO ];
+	unsigned int boot_start; //保存了系统中第一个页的编号
+	unsigned char *memmap;  // 指向存储分配位图的内存区的指针,在连接期间自动的地插入到内核映像之中
+	unsigned char *memmap_end;
+	unsigned int last_success; //指定位图上一次成功分配内存的位置，新的分配将由此开始
+	unsigned int cnt_infos;  // current number of infos stored in bootmm now
+	struct bootmm_info info[ MAX_DATA ];
 };
-// typedef struct bootmm * p_bootmm;
+
+typedef struct bootmm * p_bootmm;
+
+extern struct bootmm bmm;
 
 extern unsigned int firstusercode_start;
 extern unsigned int firstusercode_len;
 
-extern struct bootmm bmm;
-
 extern unsigned int get_phymm_size();
 
-extern void set_mminfo( struct bootmm_info *info, unsigned int start, unsigned int end, unsigned int type );
+extern void set_mminfo( p_mminfo info, unsigned int start, unsigned int end, unsigned int type );
 
-extern unsigned int insert_mminfo( struct bootmm *mm, unsigned int start, unsigned int end, unsigned int type );
+extern unsigned int insert_mminfo( p_bootmm mm, unsigned int start, unsigned int end, unsigned int type );
 
-extern unsigned int split_mminfo( struct bootmm *mm, unsigned int index, unsigned int split_start );
+extern unsigned int split_mminfo( p_bootmm mm, unsigned int index, unsigned int split_start );
 
-extern void remove_mminfo( struct bootmm *mm, unsigned int index );
+extern void remove_mminfo( p_bootmm mm, unsigned int index );
 
 extern void init_bootmm();
 

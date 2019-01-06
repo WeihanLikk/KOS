@@ -1,7 +1,6 @@
 #ifndef _ZJUNIX_PAGH_H
 #define _ZJUNIX_PAGE_H
 
-#include <page.h>
 #include <kos/list.h>
 
 #ifndef PAGE_SHIFT
@@ -13,6 +12,11 @@
 #endif
 
 #define PAGE_MASK ( ~( PAGE_SIZE - 1 ) )
+
+#define PAGE_ALIGN ( ~( ( 1 << PAGE_SHIFT ) - 1 ) )
+
+#define PAGE_FREE 0x00
+#define PAGE_USED 0xff
 
 #define INDEX_MASK 0x3ff  //低10位
 #define PGD_SHIFT 22
