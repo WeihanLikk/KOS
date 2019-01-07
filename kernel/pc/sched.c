@@ -67,7 +67,8 @@ static int need_resched()
 {
 	struct task_struct *p = my_cfs_rq.current_task;
 	//kernel_printf( "check the thread: %x\n", p->THREAD_FLAG );
-	if ( p->THREAD_FLAG == (unsigned int)TIF_NEED_RESCHED )
+	//return 0;
+	if ( p->THREAD_FLAG == TIF_NEED_RESCHED )
 	{
 		//kernel_printf( "???? be here111\n" );
 		return 1;
@@ -210,14 +211,14 @@ int asdasd()
 {
 	int countxx = 0;
 	kernel_printf( "asdasdasd !!!!!!!!!\n" );
-	for ( int i = 0; i < 10000000; i++ )
-	{
-		countxx++;
-		if ( countxx % 100000 == 0 )
-		{
-			kernel_printf( "I can do it\n" );
-		}
-	}
+	// for ( int i = 0; i < 10000000; i++ )
+	// {
+	// 	countxx++;
+	// 	if ( countxx % 100000 == 0 )
+	// 	{
+	// 		kernel_printf( "I can do it\n" );
+	// 	}
+	// }
 }
 
 static void create_shell_process( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *returnpid, int is_vm )
@@ -317,7 +318,7 @@ static void create_shell_process( char *name, void ( *entry )( unsigned int argc
 	p->context.gp = init_gp;
 	p->context.a0 = argc;
 	p->context.a1 = (unsigned int)args;
-	//attach_pid( p, newpid );
+	attach_pid( p, newpid );
 
 	kernel_printf( "Down here4\n" );
 	kernel_printf( "check the epc in create: %x asd\n", p->context.epc );
@@ -349,7 +350,7 @@ static void init_task( struct task_struct *p )
 	set_load_weight( p );
 	kernel_memset( &( p->context ), 0, sizeof( struct reg_context ) );
 
-	void( *entry ) = (void *)asdasd;
+	void( *entry ) = (void *)ps;
 	unsigned int init_gp;
 	p->context.epc = (unsigned int)entry;
 	p->context.gp = (unsigned int)p;
@@ -358,6 +359,7 @@ static void init_task( struct task_struct *p )
 	p->context.gp = init_gp;
 	p->context.a0 = 0;
 	p->context.a1 = (unsigned int)0;
+	attach_pid( p, p->pid );
 }
 
 static void init_cfs_rq( struct cfs_rq *rq )
@@ -401,9 +403,8 @@ void sched_init()
 	INIT_LIST_HEAD( &exited );
 	INIT_LIST_HEAD( &wait );
 
+	//kernel_printf( "idle wake up\n" );
 	wake_up_new_task( &idle_task );
-	kernel_printf( "idle wake up\n" );
-
 	create_shell_process( "shell", (void *)testtest, 0, 0, 0, 0 );
 
 	register_interrupt_handler( 7, scheduler_tick );
@@ -441,30 +442,37 @@ static void scheduler( struct reg_context *pt_context )
 
 		put_prev_task_fair( cfs_rq, prev );
 		next = pick_next_task( cfs_rq, prev );
-		if ( countx++ == 0 )
-		{
-			copy_context( &( next->context ), pt_context );
-		}
+		// if ( countx++ == 0 )
+		// {
+		// 	copy_context( &( next->context ), pt_context );
+		// }
 		//copy_context( &( cfs_rq->current_task->context ), pt_context );
 		//kernel_printf( "check the next pid %x\n", next->pid );
-		// if ( likely( prev != next ) )
-		// {
-		// 	//kernel_printf( "we are not the same\n" );
-		// 	copy_context( pt_context, &( cfs_rq->current_task->context ) );
+		if ( likely( prev != next ) )
+		{
+			//kernel_printf( "we are not the same\n" );
+			copy_context( pt_context, &( cfs_rq->current_task->context ) );
 
-		// 	cfs_rq->current_task = next;
-		// 	//cfs_rq->curr = &next->se;
+			cfs_rq->current_task = next;
+			//cfs_rq->curr = &next->se;
 
-		// 	copy_context( &( cfs_rq->current_task->context ), pt_context );
-		// 	//context_switch!!
-		// }
-		// else
-		// {
-		// 	copy_context( &( cfs_rq->current_task->context ), pt_context );
-		// }
+			copy_context( &( cfs_rq->current_task->context ), pt_context );
+			//context_switch!!
+		}
+		else
+		{
+			if ( countx++ == 0 )
+			{
+				copy_context( &( cfs_rq->current_task->context ), pt_context );
+				//kernel_printf( "check the epc: %x\n", cfs_rq->current_task->context.epc );
+			}
+		}
 		//kernel_printf( "Can be here\n" );
 	} while ( need_resched() );
-	//kernel_printf( "Kankan here\n" );
+	// if ( countx++ == 1 )
+	// {
+	// 	//kernel_printf( "Kankan here\n" );
+	// }
 	//kernel_printf( "Cannot be here\n" );
 	//enable_interrupts();
 }
