@@ -131,14 +131,14 @@ static void update_cfs_clock( struct cfs_rq *cfs_rq )
 	  "mfc0 %1, $9, 7\n\t"
 	  : "=r"( ticks_low ), "=r"( ticks_high ) );
 	//kernel_printf( "here??\n" );
-	unsigned long now = ticks_low;
-	// // now << 32;
-	// // now += ticks_low;
+	unsigned long long now = ticks_low;
+	now << 32;
+	now += ticks_low;
 
 	//kernel_printf( "pass in cfs_clock1\n" );
 	// // unsigned long long now = timeCount * CLOCK_INTERRUPTER_TICK;
 	signed long delta = now - prev_clock;
-	unsigned long clock = cfs_rq->clock;
+	unsigned long long clock = cfs_rq->clock;
 
 	//kernel_printf( "pass in cfs_clock2\n" );
 
@@ -149,14 +149,14 @@ static void update_cfs_clock( struct cfs_rq *cfs_rq )
 	//kernel_printf( "pass in cfs_clock3\n" );
 	cfs_rq->prev_clock_raw = now;
 	cfs_rq->clock = clock;
-	kernel_printf( "The clock is %d\n", cfs_rq->clock );
+	kernel_printf( "The clock is %x\n", cfs_rq->clock );
 }
 
 static void wake_up_new_task( struct task_struct *p )
 {
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	update_cfs_clock( cfs_rq );
-	kernel_printf( "check the curr execstart2: %d\n", cfs_rq->curr->exec_start );
+	kernel_printf( "check the curr execstart2: %x\n", cfs_rq->curr->exec_start );
 	task_new_fair( cfs_rq, p );
 
 	//cfs_rq->nr_running++;
@@ -179,7 +179,7 @@ static void wake_up_new_task( struct task_struct *p )
 // 	}
 // }
 
-static void testtest( unsigned int argc, void *args )
+static void testtest()
 {
 	kernel_printf( "HERe !!!!!!!!!\n" );
 	while ( 1 )
@@ -232,15 +232,17 @@ static void create_shell_process( char *name, void ( *entry )( unsigned int argc
 	//void( *entry ) = (void *)ps;
 	//void( *entry ) = (void *)testtest;
 	p->context.epc = (unsigned int)entry;
+	p->context.gp = (unsigned int)p;
 	asm volatile( "la %0, _gp\n\t"
 				  : "=r"( init_gp ) );
 	p->context.gp = init_gp;
-	p->context.a0 = 0;
-	p->context.a1 = 0;
-
+	p->context.a0 = argc;
+	p->context.a1 = (unsigned int)args;
 	//attach_pid( p, newpid );
 
 	kernel_printf( "Down here4\n" );
+	kernel_printf( "check the epc in create: %x asd\n", p->context.epc );
+	kernel_printf( "check the execstart in create: %x asd\n", p->se.exec_start );
 
 	my_cfs_rq.current_task = p;
 	my_cfs_rq.curr = &p->se;
@@ -277,11 +279,12 @@ static void init_cfs_rq( struct cfs_rq *rq )
 	rq->clock = 1;
 	rq->prev_clock_raw = 0;
 	rq->clock_max_delta = 0;
-	rq->load.weight = 0;
+	//rq->load.weight = 0;
 	rq->idle = &idle_task;
 	rq->rb_leftmost = NULL;
 	rq->rb_load_balance_curr = NULL;
-	kernel_printf( "check rq: %d\n", rq->clock );
+	kernel_printf( "check rq: %x\n", rq->clock );
+	kernel_memset( &( rq->load ), 0, sizeof( struct load_weight ) );
 }
 
 void sched_init()
@@ -305,7 +308,7 @@ void sched_init()
 	INIT_LIST_HEAD( &exited );
 	INIT_LIST_HEAD( &wait );
 
-	create_shell_process( "shell", (void *)ps, 0, 0, 0, 0 );
+	create_shell_process( "shell", (void *)testtest, 0, 0, 0, 0 );
 
 	register_interrupt_handler( 7, scheduler_tick );
 	asm volatile(
@@ -339,7 +342,7 @@ static void scheduler( struct reg_context *pt_context )
 		{
 			kernel_printf( "I am in nr == 1\n" );
 			copy_context( &( cfs_rq->current_task->context ), pt_context );
-
+			kernel_printf( "kankan epc: %x", pt_context->epc );
 			break;
 		}
 
@@ -357,6 +360,8 @@ static void scheduler( struct reg_context *pt_context )
 			//context_switch!!
 		}
 	} while ( need_resched() );
+	kernel_printf( "Kankan here\n" );
+
 	//enable_interrupts();
 }
 
@@ -365,12 +370,13 @@ void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *curr = cfs_rq->current_task;
 
-	update_cfs_clock( cfs_rq );
+	//update_cfs_clock( cfs_rq );
 	//time update
+	copy_context( &( cfs_rq->current_task->context ), pt_context );
+	kernel_printf( "kankan epc: %x", pt_context->epc );
+	//task_tick_fair( cfs_rq, curr );
 
-	task_tick_fair( cfs_rq, curr );
-
-	scheduler( pt_context );
+	//scheduler( pt_context );
 	asm volatile( "mtc0 $zero, $9\n\t" );
 }
 

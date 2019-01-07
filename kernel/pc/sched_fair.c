@@ -25,7 +25,7 @@ static struct sched_entity *__pick_next_entity( struct cfs_rq *cfs_rq )
 	return rb_entry( first_fair( cfs_rq ), struct sched_entity, run_node );
 }
 
-static inline unsigned long max_vruntime( unsigned long max_vruntime, unsigned long vruntime )
+static inline unsigned long long max_vruntime( unsigned long long max_vruntime, unsigned long long vruntime )
 {
 	signed long long delta = (signed long long)( vruntime - max_vruntime );
 	if ( delta > 0 )
@@ -34,7 +34,7 @@ static inline unsigned long max_vruntime( unsigned long max_vruntime, unsigned l
 	return max_vruntime;
 }
 
-static inline unsigned long min_vruntime( unsigned long min_vruntime, unsigned long vruntime )
+static inline unsigned long long min_vruntime( unsigned long long min_vruntime, unsigned long long vruntime )
 {
 	signed long long delta = (signed long long)( vruntime - min_vruntime );
 	if ( delta < 0 )
@@ -43,13 +43,13 @@ static inline unsigned long min_vruntime( unsigned long min_vruntime, unsigned l
 	return min_vruntime;
 }
 
-static unsigned long calc_delta_mine( unsigned long delta_exec, struct load_weight *lw )
+static unsigned long long calc_delta_mine( unsigned long long delta_exec, struct load_weight *lw )
 {
-	unsigned long temp;
+	unsigned long long temp;
 	if ( unlikely( !lw->inv_weight ) )
 		lw->inv_weight = ( WMULT_CONST - lw->weight / 2 ) / lw->weight + 1;
 
-	temp = (unsigned long)delta_exec * NICE_0_LOAD;
+	temp = (unsigned long long)delta_exec * NICE_0_LOAD;
 
 	if ( unlikely( temp > WMULT_CONST ) )
 		temp = SRR( SRR( temp, WMULT_SHIFT / 2 ) * lw->inv_weight,
@@ -57,14 +57,14 @@ static unsigned long calc_delta_mine( unsigned long delta_exec, struct load_weig
 	else
 		temp = SRR( temp * lw->inv_weight, WMULT_SHIFT );
 
-	return (unsigned long)min( temp, (unsigned long)LONG_MAX );
+	return (unsigned long long)min( temp, (unsigned long long)LONG_MAX );
 }
 
-static unsigned long sched_vslice_add( struct cfs_rq *cfs_rq, struct sched_entity *se )
+static unsigned long long sched_vslice_add( struct cfs_rq *cfs_rq, struct sched_entity *se )
 {
-	unsigned long nr_running = cfs_rq->nr_running + 1;
-	unsigned long period = sysctl_sched_latency;  // 20ms
-	unsigned long nr_latency = sched_nr_latency;  // 5
+	unsigned int nr_running = cfs_rq->nr_running + 1;
+	unsigned long long period = sysctl_sched_latency;  // 20ms
+	unsigned long long nr_latency = sched_nr_latency;  // 5
 
 	if ( unlikely( nr_running > nr_latency ) )
 	{
@@ -72,7 +72,7 @@ static unsigned long sched_vslice_add( struct cfs_rq *cfs_rq, struct sched_entit
 		do_div( period, nr_latency );
 	}
 
-	unsigned long vslice = period;
+	unsigned long long vslice = period;
 	vslice *= NICE_0_LOAD;
 	do_div( vslice, cfs_rq->load.weight + se->load.weight );  //cfs_rq->load.weight don't know if needed!
 	return vslice;
@@ -81,17 +81,17 @@ static unsigned long sched_vslice_add( struct cfs_rq *cfs_rq, struct sched_entit
 static void update_curr( struct cfs_rq *cfs_rq )
 {
 	struct sched_entity *curr = cfs_rq->curr;
-	unsigned long now = cfs_rq->clock;  // ori from rq -> clock
-	unsigned long delta_exec;
-	kernel_printf( "now in update_curr: %d\n", now );
+	unsigned long long now = cfs_rq->clock;  // ori from rq -> clock
+	unsigned long long delta_exec;
+	kernel_printf( "now in update_curr: %x\n", now );
 	//kernel_printf( "check the curr execstart4: %d\n", my_cfs_rq.curr->exec_start );
-	delta_exec = (unsigned long)( now - curr->exec_start );
+	delta_exec = (unsigned long long)( now - curr->exec_start );
 
 	//kernel_printf( "1here ??\n" );
 
-	unsigned long vruntime;
+	unsigned long long vruntime;
 
-	curr->exec_max = max( (unsigned long)delta_exec, curr->exec_max );
+	curr->exec_max = max( (unsigned long long)delta_exec, curr->exec_max );
 	curr->sum_exec_runtime += delta_exec;
 
 	//kernel_printf( "2here ??\n" );
@@ -123,7 +123,7 @@ static void update_curr( struct cfs_rq *cfs_rq )
 
 static void place_entity( struct cfs_rq *cfs_rq, struct sched_entity *se, int initial )
 {
-	unsigned long vruntime;
+	unsigned long long vruntime;
 	vruntime = cfs_rq->min_vruntime;
 	if ( initial )
 	{
@@ -138,7 +138,7 @@ static void place_entity( struct cfs_rq *cfs_rq, struct sched_entity *se, int in
 	se->vruntime = vruntime;
 }
 
-static inline unsigned long entity_key( struct cfs_rq *cfs_rq, struct sched_entity *se )
+static inline unsigned long long entity_key( struct cfs_rq *cfs_rq, struct sched_entity *se )
 {
 	return se->vruntime - cfs_rq->min_vruntime;
 }
@@ -164,7 +164,7 @@ static void __enqueue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )
 	struct rb_node **link = &cfs_rq->tasks_timeline.rb_node;
 	struct rb_node *parent = NULL;
 	struct sched_entity *temp_entry;
-	unsigned long key = se->vruntime - cfs_rq->min_vruntime;
+	unsigned long long key = se->vruntime - cfs_rq->min_vruntime;
 	int leftmost = 1;
 
 	while ( *link )
@@ -255,10 +255,10 @@ static inline void resched_task( struct task_struct *p )
 	//task_thread_info( p )->flag = TIF_NEED_RESCHED;
 }
 
-static unsigned long sched_slice( struct cfs_rq *cfs_rq, struct sched_entity *se )
+static unsigned long long sched_slice( struct cfs_rq *cfs_rq, struct sched_entity *se )
 {
-	unsigned long slice = sysctl_sched_latency;
-	unsigned long nr_latency = sched_nr_latency;
+	unsigned long long slice = sysctl_sched_latency;
+	unsigned long long nr_latency = sched_nr_latency;
 	if ( unlikely( cfs_rq->nr_running > nr_latency ) )
 	{
 		slice *= cfs_rq->nr_running;
@@ -273,7 +273,7 @@ static unsigned long sched_slice( struct cfs_rq *cfs_rq, struct sched_entity *se
 
 static void check_preempt_tick( struct cfs_rq *cfs_rq, struct sched_entity *curr )
 {
-	unsigned long ideal_runtime, delta_exec;
+	unsigned long long ideal_runtime, delta_exec;
 
 	ideal_runtime = sched_slice( cfs_rq, curr );
 	delta_exec = curr->sum_exec_runtime - curr->prev_sum_exec_runtime;
@@ -345,7 +345,7 @@ void check_preempt_wakeup( struct cfs_rq *cfs_rq, struct task_struct *p )
 	struct task_struct *curr = cfs_rq->current_task;
 	struct sched_entity *se = &curr->se, *pse = &p->se;
 
-	unsigned long gran = sysctl_sched_wakeup_granularity;
+	unsigned long long gran = sysctl_sched_wakeup_granularity;
 	if ( unlikely( se->load.weight != NICE_0_LOAD ) )
 		gran = calc_delta_mine( gran, &se->load );
 

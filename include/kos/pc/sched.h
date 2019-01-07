@@ -151,9 +151,9 @@ struct load_weight
 struct cfs_rq
 {
 	struct load_weight load;
-	unsigned long nr_running;
-	unsigned long exec_clock;
-	unsigned long min_vruntime;
+	unsigned int nr_running;
+	unsigned long long exec_clock;
+	unsigned long long min_vruntime;
 
 	struct rb_root tasks_timeline;
 	struct rb_node *rb_leftmost;
@@ -163,9 +163,9 @@ struct cfs_rq
 	struct task_struct *current_task;
 	struct task_struct *idle;
 
-	unsigned long clock;
-	unsigned long prev_clock_raw;
-	unsigned long clock_max_delta;
+	unsigned long long clock;
+	unsigned long long prev_clock_raw;
+	unsigned long long clock_max_delta;
 };
 
 // struct rq
@@ -180,13 +180,13 @@ struct sched_entity
 	struct rb_node run_node;
 	unsigned int on_rq;
 
-	unsigned long exec_start;
-	unsigned long sum_exec_runtime;
-	unsigned long vruntime;
-	unsigned long prev_sum_exec_runtime;
-	unsigned long exec_max;
-	unsigned long wait_start;
-	unsigned long wait_max;
+	unsigned long long exec_start;
+	unsigned long long sum_exec_runtime;
+	unsigned long long vruntime;
+	unsigned long long prev_sum_exec_runtime;
+	unsigned long long exec_max;
+	unsigned long long wait_start;
+	unsigned long long wait_max;
 
 	struct cfs_rq *cfs_rq;
 };
