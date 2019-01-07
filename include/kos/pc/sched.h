@@ -4,7 +4,7 @@
 #include <kos/pc/rbtree.h>
 #include <kos/kernel.h>
 #include <kos/pc/pid.h>
-#include <kos/vm.h>
+#include <kos/vm/vmm.h>
 
 #define TASK_RUNNING 0  //进程要么正在执行，要么准备执行
 #define TASK_READY 1

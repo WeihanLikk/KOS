@@ -1,5 +1,5 @@
 #include <kos/pc/sched.h>
-//#include <kos/vm/vmm.h>
+// #include <kos/vm/vmm.h>
 #include <driver/vga.h>
 #include <intr.h>
 #include <kos/log.h>
@@ -203,11 +203,10 @@ int asdasd()
 	int countxx = 11;
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	kernel_printf( "asdasdasd !!!!!!!!!\n" );
-	kernel_printf( "Now, to try addr below 80000000\n" );
 	for ( int i = 0; i < 10000000; i++ )
 	{
 		countxx++;
-		if ( countxx % 1000 ==  0)
+		if ( countxx % 100000==  0)
 		{
 			kernel_printf( "I can do it\n" );
 		}

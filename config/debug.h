@@ -14,7 +14,8 @@
 // #define BOOTMM_DEBUG
 
 // slab: display debug info
-// #define SLAB_DEBUG
+#define SLAB_DEBUG
+#define BUDDY_DEBUG
 
 // myvi: display debug info
 // #define MYVI_DEBUG
@@ -23,4 +24,6 @@
 // #define FS_DEBUG
 
 // exec
-// #define EXEC_DEBUG
+#define EXEC_DEBUG
+
+#define TLB_DEBUG

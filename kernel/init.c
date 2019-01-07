@@ -6,6 +6,7 @@
 #include <page.h>
 #include <kos/bootmm.h>
 #include <kos/buddy.h>
+#include <kos/vm/vmm.h>
 //#include <kos/fs/fat.h>
 #include <kos/log.h>
 #include <kos/pc/sched.h>
@@ -18,12 +19,14 @@ void machine_info()
 	int row;
 	int col;
 	kernel_printf( "\n%s\n", "kos v1.0" );
-	char *vaddr =(char *) 1;
-	kernel_printf( "start to test vaddr...\n");
-	*vaddr = (char)1;
-	kernel_printf( "vaddr sucess: %x\n",0);
-	char a = *vaddr;
-	kernel_printf( "vaddr sucess: %x\n",a);
+	char * vaddr =(char *) 0x11;
+	kernel_printf( "Now, to test vaddr which is below kenel entry\n" );
+	kernel_printf( "start to test vaddr..., vaddr = 0x11\n");
+	memset(vaddr, 0, 1);
+	kernel_printf( "vaddr write sucess!\n");
+	//char a = *vaddr;
+	kernel_printf( "vaddr read sucess: ");
+	//kernel_printf( "%x\n",a);
 	row = cursor_row;
 	col = cursor_col;
 	cursor_row = 29;
