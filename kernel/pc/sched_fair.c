@@ -107,7 +107,7 @@ static void update_curr( struct cfs_rq *cfs_rq )
 
 	if ( first_fair( cfs_rq ) )
 	{
-		kernel_printf( "cannot be here\n" );
+		//kernel_printf( "cannot be here\n" );
 		vruntime = min_vruntime( curr->vruntime, __pick_next_entity( cfs_rq )->vruntime );
 	}
 	else
@@ -299,7 +299,7 @@ static void put_prev_entity( struct cfs_rq *cfs_rq, struct sched_entity *prev )
 		prev->wait_start = cfs_rq->clock;
 		__enqueue_entity( cfs_rq, prev );
 	}
-	cfs_rq->current_task = NULL;
+	//cfs_rq->current_task = NULL;
 }
 
 static void set_next_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )

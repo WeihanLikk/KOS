@@ -19,7 +19,7 @@ void machine_info()
 	int row;
 	int col;
 	kernel_printf( "\n%s\n", "kos v1.0" );
-	char * vaddr =(char *) 0x11;
+	char *vaddr = (char *)0x11;
 	kernel_printf( "Now, to test vaddr which is below kenel entry\n" );
 	kernel_printf( "start to test vaddr..., vaddr = 0x11\n");
 	int b = 0;
@@ -32,7 +32,7 @@ void machine_info()
 	memset(vaddr, 0, 1);
 	kernel_printf( "vaddr write sucess!\n");
 	//char a = *vaddr;
-	kernel_printf( "vaddr read sucess: ");
+	kernel_printf( "vaddr read sucess: " );
 	//kernel_printf( "%x\n",a);
 	row = cursor_row;
 	col = cursor_col;

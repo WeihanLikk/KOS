@@ -13,6 +13,7 @@ struct cfs_rq my_cfs_rq;
 struct task_struct idle_task;
 struct task_struct *current_task = 0;
 int countx = 0;
+unsigned long total = 0;
 
 static void copy_context( struct reg_context *src, struct reg_context *dest )
 {
@@ -65,15 +66,15 @@ static void set_load_weight( struct task_struct *p )
 static int need_resched()
 {
 	struct task_struct *p = my_cfs_rq.current_task;
-	kernel_printf( "fuck here\n" );
-	if ( 0 == 3 )
+	//kernel_printf( "check the thread: %x\n", p->THREAD_FLAG );
+	if ( p->THREAD_FLAG == (unsigned int)TIF_NEED_RESCHED )
 	{
-		kernel_printf( "???? be here\n" );
+		//kernel_printf( "???? be here111\n" );
 		return 1;
 	}
 	else
 	{
-		kernel_printf( "Must be here\n" );
+		//kernel_printf( "Must be here222\n" );
 		return 0;
 	}
 }
@@ -81,6 +82,7 @@ static int need_resched()
 static void clear_tsk_need_resched( struct task_struct *p )
 {
 	p->THREAD_FLAG = 0;
+	//kernel_printf( "check the falg in clear: %x\n", p->THREAD_FLAG );
 	//ThREAD_FLAG = 0;
 }
 
@@ -136,8 +138,14 @@ static void update_cfs_clock( struct cfs_rq *cfs_rq )
 	  "mfc0 %1, $9, 7\n\t"
 	  : "=r"( ticks_low ), "=r"( ticks_high ) );
 	//kernel_printf( "here??\n" );
-	unsigned long now = ticks_low;
-	// now << 32;
+	unsigned long now;
+	ticks_low = ( ticks_low >> 3 | ticks_high << 29 );
+	ticks_high >>= 3;
+	now = ( ticks_high % 125 );
+	now = now * 10995 + ( now * 45421 ) % 125;
+	now += ticks_low / 125;
+
+	//now << 32;
 	// now += ticks_low;
 
 	//kernel_printf( "pass in cfs_clock1\n" );
@@ -161,7 +169,7 @@ static void wake_up_new_task( struct task_struct *p )
 {
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	update_cfs_clock( cfs_rq );
-	//kernel_printf( "check the curr execstart2: %x\n", cfs_rq->curr->exec_start );
+
 	task_new_fair( cfs_rq, p );
 
 	//cfs_rq->nr_running++;
@@ -186,27 +194,26 @@ static void wake_up_new_task( struct task_struct *p )
 
 int testtest()
 {
-	int countxx = 0;
+	//int countxx = 0;
 	kernel_printf( "HERe !!!!!!!!!\n" );
-	for ( int i = 0; i < 10000000; i++ )
-	{
-		countxx++;
-		if ( countxx == 10000 )
-		{
-			kernel_printf( "I can do it\n" );
-		}
-	}
+	// for ( int i = 0; i < 10000000; i++ )
+	// {
+	// 	countxx++;
+	// 	if ( countxx == 10000 )
+	// 	{
+	// 		kernel_printf( "I can do it\n" );
+	// 	}
+	// }
 }
 
 int asdasd()
 {
-	int countxx = 11;
-	struct cfs_rq *cfs_rq = &my_cfs_rq;
+	int countxx = 0;
 	kernel_printf( "asdasdasd !!!!!!!!!\n" );
 	for ( int i = 0; i < 10000000; i++ )
 	{
 		countxx++;
-		if ( countxx % 100000==  0)
+		if ( countxx % 100000 == 0 )
 		{
 			kernel_printf( "I can do it\n" );
 		}
@@ -427,34 +434,30 @@ static void scheduler( struct reg_context *pt_context )
 			// if only one task idle
 			break;
 		}
-		else if ( cfs_rq->nr_running == 1 )
-		{
-			kernel_printf( "I am in nr == 1\n" );
-			copy_context( &( cfs_rq->current_task->context ), pt_context );
-			//kernel_printf( "kankan epc: %x", pt_context->epc );
-			break;
-		}
 
-		kernel_printf( "kankan wo lai le ji ci\n" );
+		//kernel_printf( "kankan wo lai le ji ci\n" );
+
+		//kernel_printf( "check the prev pid: %x\n", prev->pid );
 
 		put_prev_task_fair( cfs_rq, prev );
 		next = pick_next_task( cfs_rq, prev );
-		kernel_printf( "check the falg %d\n", next->THREAD_FLAG );
+
+		//kernel_printf( "check the next pid %x\n", next->pid );
 		if ( likely( prev != next ) )
 		{
-			kernel_printf( "we are not the same\n" );
+			//kernel_printf( "we are not the same\n" );
 			copy_context( pt_context, &( cfs_rq->current_task->context ) );
 
 			cfs_rq->current_task = next;
-			cfs_rq->curr = &next->se;
+			//cfs_rq->curr = &next->se;
 
 			copy_context( &( cfs_rq->current_task->context ), pt_context );
 			//context_switch!!
 		}
-		kernel_printf( "Can be here\n" );
+		//kernel_printf( "Can be here\n" );
 	} while ( need_resched() );
 	//kernel_printf( "Kankan here\n" );
-	kernel_printf( "Cannot be here\n" );
+	//kernel_printf( "Cannot be here\n" );
 	//enable_interrupts();
 }
 
@@ -462,7 +465,7 @@ void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context
 {
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *curr = cfs_rq->current_task;
-	// update_cfs_clock( cfs_rq );
+	//update_cfs_clock( cfs_rq );
 	//time update
 
 	if ( countx++ == 0 )
@@ -471,10 +474,17 @@ void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context
 	}
 	// kernel_printf( "kankan epc: %x", pt_context->epc );
 
-	// task_tick_fair( cfs_rq, curr );
-	
+	//task_tick_fair( cfs_rq, curr );
 
-	// scheduler( pt_context );
+	//scheduler( pt_context );
+	//struct task_struct *prev, *next;
+	//prev = cfs_rq->current_task;
+	//put_prev_task_fair( cfs_rq, prev );
+	//next = pick_next_task( cfs_rq, prev );
+	// if ( countx++ == 0 )
+	// {
+	// 	copy_context( &( cfs_rq->current_task->context ), pt_context );
+	// }
 
 	asm volatile( "mtc0 $zero, $9\n\t" );
 }
