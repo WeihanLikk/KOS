@@ -138,7 +138,7 @@ void __free_pages(struct page *pbpage, unsigned int bplevel) {
     
     list_add(&(pbpage->lru), &(buddy.free_area[bplevel].free_list));
     #ifdef BUDDY_DEBUG
-    kernel_printf("%x %x\n", pbpage->list.next, buddy.freelist[order].free_head.next);
+    kernel_printf("%x %x\n", pbpage->lru.next, buddy.free_area[order].free_list.next);
     #endif
     buddy.free_area[order].nr_free++;
     
