@@ -23,7 +23,6 @@
 extern struct cfs_rq my_cfs_rq;
 extern struct task_struct idle_task;
 extern struct task_struct *current_task;
-extern int xxxxxxxxxxxxxxx;
 
 //#define current() ( my_cfs_rq.current_task )
 

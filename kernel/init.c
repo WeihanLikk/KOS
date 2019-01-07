@@ -18,12 +18,12 @@ void machine_info()
 	int row;
 	int col;
 	kernel_printf( "\n%s\n", "kos v1.0" );
-	char *vaddr =(char *) 1;
-	kernel_printf( "start to test vaddr...\n");
-	*vaddr = (char)1;
-	kernel_printf( "vaddr sucess: %x\n",0);
-	char a = *vaddr;
-	kernel_printf( "vaddr sucess: %x\n",a);
+	//char *vaddr =(char *) 1;
+	//kernel_printf( "start to test vaddr...\n" );
+	//*vaddr = (char)1;
+	//kernel_printf( "vaddr sucess: %x\n", 0 );
+	//char a = *vaddr;
+	//kernel_printf( "vaddr sucess: %x\n", a );
 	row = cursor_row;
 	col = cursor_col;
 	cursor_row = 29;
