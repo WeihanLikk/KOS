@@ -14,6 +14,7 @@
         "page.h": "c",
         "bootmm.h": "c",
         "ps.h": "c",
-        "tlbload.h": "c"
+        "tlbload.h": "c",
+        "slab.h": "c"
     }
 }

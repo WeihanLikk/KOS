@@ -22,6 +22,13 @@ void machine_info()
 	char * vaddr =(char *) 0x11;
 	kernel_printf( "Now, to test vaddr which is below kenel entry\n" );
 	kernel_printf( "start to test vaddr..., vaddr = 0x11\n");
+	int b = 0;
+	char content = b ? -1 : 0;
+	kernel_printf( "content = %x\n",content);
+	char *deststr = vaddr;
+	kernel_printf( "after deststr = vaddr\n");
+	*deststr = content;
+	kernel_printf( "after *deststr = content\n");
 	memset(vaddr, 0, 1);
 	kernel_printf( "vaddr write sucess!\n");
 	//char a = *vaddr;
