@@ -1,7 +1,7 @@
 #include <driver/vga.h>
 #include <kos/utils.h>
-#include <kos/mm/bootmm.h>
-#include <kos/mm/buddy.h>
+#include <kos/bootmm.h>
+#include <kos/buddy.h>
 #include <kos/list.h>
 #include <kos/lock.h>
 

@@ -1,43 +1,50 @@
 .extern init_kernel
 .globl start
 .globl exception
+.globl restore_context
+
 .extern kernel_sp
 .extern exception_handler
 .extern interrupt_handler
+.extern current_task
 
 .set noreorder
 .set noat
 .align 2
 
-	
-.org 0x0000
-	lui $k0, 0x8000
-	sltu $k0, $sp, $k0
-	beq $k0, $zero, tlb_exception_save_context
-	move $k1, $sp
-	la  $k0, kernel_sp	
-	j tlb_exception_save_context
-	lw  $sp, 0($k0)
-
+exception:
+	j   exception_start
+	nop
 
 .org 0x0180
-exception:
+exception_start:
 	lui $k0, 0x8000
 	sltu $k0, $sp, $k0
 	beq $k0, $zero, exception_save_context
-	move $k1, $sp # if in user mode
-	la  $k0, kernel_sp # jump to 8100 0000	
+	move $k1, $sp	#延时槽
+	#la  $k0, kernel_sp		#switch_ex?????
+	#add by Ice
+	la   $k0, current_task
+	lw   $k0, 0($k0)
+    addiu $k0, $k0, 4096
+	#done by Ice
 	j exception_save_context
-	lw  $sp, 0($k0)
+	or   $sp, $k0, $zero
+	#lw  $sp, 0($k0)
+
 
 .org 0x0200
 	lui $k0, 0x8000
 	sltu $k0, $sp, $k0
 	beq $k0, $zero, interrupt_save_context
 	move $k1, $sp
-	la  $k0, kernel_sp
-	lw  $sp, 0($k0)
-		
+	#la  $k0, kernel_sp
+	#lw  $sp, 0($k0)
+	la   $k0, current_task
+	lw   $k0, 0($k0)
+    addiu $k0, $k0, 4096	
+	or   $sp, $k0, $zero
+
 interrupt_save_context:
 	addiu $sp, $sp, -128
 	sw $at, 4($sp)
@@ -118,7 +125,7 @@ restore_context:
 	lw $t8, 96($sp)
 	lw $t9, 100($sp)
 	lw $gp, 112($sp)
-	lw $k1, 116($sp)
+	lw $k1, 116($sp)  #sp
 	lw $fp, 120($sp)
 	lw $ra, 124($sp)	
 	move $sp, $k1
@@ -152,57 +159,7 @@ exception_save_context:
 	sw $t8, 96($sp)
 	sw $t9, 100($sp)
 	sw $gp, 112($sp)
-	sw $k1, 116($sp)
-	sw $fp, 120($sp)
-	sw $ra, 124($sp)
-	mfc0 $a0, $12 # status
-	mfc0 $a1, $13 # cause
-	mfc0 $a2, $14 # EPC
-	mfhi $t3
-	mflo $t4
-	sw $a2, 0($sp) # EPC
-	sw $t3, 104($sp) # HI
-	sw $t4, 108($sp) # LO   why 104? why 108????
-
-# jump to do_exceptions
-	move $a2, $sp
-	addi $sp, $sp, -32
-	jal do_exceptions
-	nop
-	addi $sp, $sp, 32
-
-	j restore_context
-	nop
-
-tlb_exception_save_context:
-	addiu $sp, $sp, -128
-	sw $at, 4($sp)
-	sw $v0, 8($sp)
-	sw $v1, 12($sp)
-	sw $a0, 16($sp)
-	sw $a1, 20($sp)
-	sw $a2, 24($sp)
-	sw $a3, 28($sp)
-	sw $t0, 32($sp)
-	sw $t1, 36($sp)
-	sw $t2, 40($sp)
-	sw $t3, 44($sp)
-	sw $t4, 48($sp)
-	sw $t5, 52($sp)
-	sw $t6, 56($sp)
-	sw $t7, 60($sp)
-	sw $s0, 64($sp)
-	sw $s1, 68($sp)
-	sw $s2, 72($sp)
-	sw $s3, 76($sp)
-	sw $s4, 80($sp)
-	sw $s5, 84($sp)
-	sw $s6, 88($sp)
-	sw $s7, 92($sp)
-	sw $t8, 96($sp)
-	sw $t9, 100($sp)
-	sw $gp, 112($sp)
-	sw $k1, 116($sp)
+	sw $k1, 116($sp) #sp
 	sw $fp, 120($sp)
 	sw $ra, 124($sp)
 	mfc0 $a0, $12
@@ -214,34 +171,18 @@ tlb_exception_save_context:
 	sw $t3, 104($sp) # HI
 	sw $t4, 108($sp) # LO
 
-# jump to tlb_exceptions
+	#add by Ice
+	mfc0  $a3, $8  #bad_addr
+	#done by Ice
+# jump to do_exceptions
 	move $a2, $sp
 	addi $sp, $sp, -32
-	jal tlb_exception
+	jal do_exceptions
 	nop
 	addi $sp, $sp, 32
 
 	j restore_context
 	nop
-
-tlb_exception:
-	#TLB refill
- 	mfc0 $k0, $4 # context, page table entry
- 	lw $k1, 0($k0) 
- 	mtc0 $k1, $2 # copy the first content in page table entry address to EntryLo0
- 	lw $k1, 4($k0) 
- 	mtc0 $k1, $3 # copy the second content in (page table entry address +4) to EntryLo1
- 	lw $k1, 8($k0) 
- 	mtc0 $k1, $10 # copy the third content in (page table entry address +8) to EntryHi
- 	lw $k1, 12($k0)
- 	mtc0 $k1, $5 # copy the forth content in (page table entry address +12) to PageMask
- 	nop #	CP0 hazard
- 	nop #  	CP0 hazard
- 	tlbwr  # write tlb entry selected by random
- 	# eret # eret所作的操作为：
-	 # 将EPC/ErrorEPC的值置入PC，同时清除CP0_Status寄存器的EXL位。
-	 # MIPS下，当Status寄存器的EXL(exception)位为1，即表示处理器进入异常处理，处于特权模式下。
-
 
 .org 0x1000
 start:

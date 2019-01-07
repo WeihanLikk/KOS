@@ -3,6 +3,7 @@
 #include <driver/vga.h>
 #include <intr.h>
 #include <kos/log.h>
+#include <kos/slab.h>
 #include <kos/ps.h>
 
 struct list_head wait;
@@ -10,7 +11,8 @@ struct list_head exited;
 
 struct cfs_rq my_cfs_rq;
 struct task_struct idle_task;
-int test = 0;
+struct task_struct *current_task = 0;
+int countx = 0;
 
 static void copy_context( struct reg_context *src, struct reg_context *dest )
 {
@@ -63,12 +65,15 @@ static void set_load_weight( struct task_struct *p )
 static int need_resched()
 {
 	struct task_struct *p = my_cfs_rq.current_task;
-	if ( unlikely( p->THREAD_FLAG == TIF_NEED_RESCHED ) )
+	kernel_printf( "fuck here\n" );
+	if ( 0 == 3 )
 	{
+		kernel_printf( "???? be here\n" );
 		return 1;
 	}
 	else
 	{
+		kernel_printf( "Must be here\n" );
 		return 0;
 	}
 }
@@ -131,14 +136,14 @@ static void update_cfs_clock( struct cfs_rq *cfs_rq )
 	  "mfc0 %1, $9, 7\n\t"
 	  : "=r"( ticks_low ), "=r"( ticks_high ) );
 	//kernel_printf( "here??\n" );
-	unsigned long long now = ticks_low;
-	now << 32;
-	now += ticks_low;
+	unsigned long now = ticks_low;
+	// now << 32;
+	// now += ticks_low;
 
 	//kernel_printf( "pass in cfs_clock1\n" );
 	// // unsigned long long now = timeCount * CLOCK_INTERRUPTER_TICK;
 	signed long delta = now - prev_clock;
-	unsigned long long clock = cfs_rq->clock;
+	unsigned long clock = cfs_rq->clock;
 
 	//kernel_printf( "pass in cfs_clock2\n" );
 
@@ -149,14 +154,14 @@ static void update_cfs_clock( struct cfs_rq *cfs_rq )
 	//kernel_printf( "pass in cfs_clock3\n" );
 	cfs_rq->prev_clock_raw = now;
 	cfs_rq->clock = clock;
-	kernel_printf( "The clock is %x\n", cfs_rq->clock );
+	//kernel_printf( "The clock is %x\n", cfs_rq->clock );
 }
 
 static void wake_up_new_task( struct task_struct *p )
 {
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	update_cfs_clock( cfs_rq );
-	kernel_printf( "check the curr execstart2: %x\n", cfs_rq->curr->exec_start );
+	//kernel_printf( "check the curr execstart2: %x\n", cfs_rq->curr->exec_start );
 	task_new_fair( cfs_rq, p );
 
 	//cfs_rq->nr_running++;
@@ -179,11 +184,34 @@ static void wake_up_new_task( struct task_struct *p )
 // 	}
 // }
 
-static void testtest()
+int testtest()
 {
+	int countxx = 0;
 	kernel_printf( "HERe !!!!!!!!!\n" );
-	while ( 1 )
-		;
+	for ( int i = 0; i < 10000000; i++ )
+	{
+		countxx++;
+		if ( countxx == 10000 )
+		{
+			kernel_printf( "I can do it\n" );
+		}
+	}
+}
+
+int asdasd()
+{
+	int countxx = 11;
+	struct cfs_rq *cfs_rq = &my_cfs_rq;
+	kernel_printf( "asdasdasd !!!!!!!!!\n" );
+	kernel_printf( "Now, to try addr below 80000000\n" );
+	for ( int i = 0; i < 10000000; i++ )
+	{
+		countxx++;
+		if ( countxx % 1000 ==  0)
+		{
+			kernel_printf( "I can do it\n" );
+		}
+	}
 }
 
 static void create_shell_process( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *returnpid, int is_vm )
@@ -200,6 +228,51 @@ static void create_shell_process( char *name, void ( *entry )( unsigned int argc
 		kernel_printf( "pid allocated failed\n" );
 		return;
 	}
+	// union thread_union *new;
+	// new = (union thread_union *)kmalloc( sizeof( union thread_union ) );
+	// if ( new == 0 )
+	// {
+	// 	kernel_printf( "new allocated failed\n" );
+	// 	while ( 1 )
+	// 		;
+	// }
+	// new->task.pid = 1;
+	// new->task.parent = 0;
+	// new->task.policy = SCHED_NORMAL;
+	// new->task.prioiry = cfs_rq->idle->prioiry;
+	// new->task.THREAD_FLAG = 0;
+
+	// kernel_memset( &( new->task.se ), 0, sizeof( struct sched_entity ) );
+	// sched_fork( &new->task );
+	// //p->se.exec_start = 0;
+	// kernel_printf( "Down here2\n" );
+
+	// kernel_strcpy( new->task.name, "shell" );
+
+	// kernel_memset( &( new->task.context ), 0, sizeof( struct reg_context ) );
+
+	// kernel_printf( "Down here3\n" );
+
+	// //void( *entry ) = (void *)ps;
+	// //void( *entry ) = (void *)testtest;
+	// new->task.context.epc = (unsigned int)entry;
+	// new->task.context.gp = (unsigned int)p;
+	// asm volatile( "la %0, _gp\n\t"
+	// 			  : "=r"( init_gp ) );
+	// new->task.context.gp = init_gp;
+	// new->task.context.a0 = argc;
+	// new->task.context.a1 = (unsigned int)args;
+	// //attach_pid( p, newpid );
+
+	// kernel_printf( "Down here4\n" );
+	// // kernel_printf( "check the epc in create: %x asd\n", p->context.epc );
+	// // kernel_printf( "check the execstart in create: %x asd\n", p->se.exec_start );
+
+	// my_cfs_rq.current_task = &new->task;
+	// my_cfs_rq.curr = &new->task.se;
+	// current_task = my_cfs_rq.current_task;
+	// kernel_printf( "kernel shell created\n" );
+
 	p = (struct task_struct *)kmalloc( sizeof( struct task_struct ) );
 	//p = (struct task_struct *)( (unsigned int)a | 0x80000000 );
 	//x = (int *)( (unsigned int)y | 0x80000000 );
@@ -244,8 +317,9 @@ static void create_shell_process( char *name, void ( *entry )( unsigned int argc
 	kernel_printf( "check the epc in create: %x asd\n", p->context.epc );
 	kernel_printf( "check the execstart in create: %x asd\n", p->se.exec_start );
 
-	my_cfs_rq.current_task = p;
-	my_cfs_rq.curr = &p->se;
+	// my_cfs_rq.current_task = p;
+	// my_cfs_rq.curr = &p->se;
+	// current_task = my_cfs_rq.current_task;
 	//my_cfs_rq.tasks_timeline.rb_node = &my_cfs_rq.curr->run_node;
 	// kernel_printf( "check the context %d\n", p->context.a1 );
 	// kernel_printf( "check the pid: %d\n", p->pid );
@@ -265,7 +339,19 @@ static void init_task( struct task_struct *p )
 	p->parent = 0;
 	p->policy = SCHED_NORMAL;
 	p->prioiry = 120;
+	kernel_memset( &( p->se ), 0, sizeof( struct sched_entity ) );
 	set_load_weight( p );
+	kernel_memset( &( p->context ), 0, sizeof( struct reg_context ) );
+
+	void( *entry ) = (void *)asdasd;
+	unsigned int init_gp;
+	p->context.epc = (unsigned int)entry;
+	p->context.gp = (unsigned int)p;
+	asm volatile( "la %0, _gp\n\t"
+				  : "=r"( init_gp ) );
+	p->context.gp = init_gp;
+	p->context.a0 = 0;
+	p->context.a1 = (unsigned int)0;
 }
 
 static void init_cfs_rq( struct cfs_rq *rq )
@@ -280,11 +366,13 @@ static void init_cfs_rq( struct cfs_rq *rq )
 	rq->prev_clock_raw = 0;
 	rq->clock_max_delta = 0;
 	//rq->load.weight = 0;
-	rq->idle = &idle_task;
 	rq->rb_leftmost = NULL;
 	rq->rb_load_balance_curr = NULL;
-	kernel_printf( "check rq: %x\n", rq->clock );
+	//kernel_printf( "check rq: %x\n", rq->clock );
 	kernel_memset( &( rq->load ), 0, sizeof( struct load_weight ) );
+	rq->idle = &idle_task;
+	rq->current_task = current_task = &idle_task;
+	rq->curr = &idle_task.se;
 }
 
 void sched_init()
@@ -294,12 +382,11 @@ void sched_init()
 
 	init_task( &idle_task );
 	init_cfs_rq( &my_cfs_rq );
+
 	//idle_task = init_task();
 	//my_cfs_rq = init_cfs_rq();
 	// init_task = INIT_TASK( init_task );
 	// my_cfs_rq = INIT_CFS_RQ( my_cfs_rq );
-
-	kernel_printf( "test for bootmem\n" );
 
 	//set_load_weight( &init_task );
 	//init_idle( &init_task );
@@ -307,6 +394,9 @@ void sched_init()
 
 	INIT_LIST_HEAD( &exited );
 	INIT_LIST_HEAD( &wait );
+
+	wake_up_new_task( &idle_task );
+	kernel_printf( "idle wake up\n" );
 
 	create_shell_process( "shell", (void *)testtest, 0, 0, 0, 0 );
 
@@ -330,7 +420,7 @@ static void scheduler( struct reg_context *pt_context )
 		update_cfs_clock( cfs_rq );
 		clear_tsk_need_resched( prev );
 
-		kernel_printf( "Check the nr %d\n", cfs_rq->nr_running );
+		//kernel_printf( "Check the nr %d\n", cfs_rq->nr_running );
 
 		if ( unlikely( !cfs_rq->nr_running ) )
 		{
@@ -342,15 +432,18 @@ static void scheduler( struct reg_context *pt_context )
 		{
 			kernel_printf( "I am in nr == 1\n" );
 			copy_context( &( cfs_rq->current_task->context ), pt_context );
-			kernel_printf( "kankan epc: %x", pt_context->epc );
+			//kernel_printf( "kankan epc: %x", pt_context->epc );
 			break;
 		}
 
+		kernel_printf( "kankan wo lai le ji ci\n" );
+
 		put_prev_task_fair( cfs_rq, prev );
 		next = pick_next_task( cfs_rq, prev );
-
+		kernel_printf( "check the falg %d\n", next->THREAD_FLAG );
 		if ( likely( prev != next ) )
 		{
+			kernel_printf( "we are not the same\n" );
 			copy_context( pt_context, &( cfs_rq->current_task->context ) );
 
 			cfs_rq->current_task = next;
@@ -359,9 +452,10 @@ static void scheduler( struct reg_context *pt_context )
 			copy_context( &( cfs_rq->current_task->context ), pt_context );
 			//context_switch!!
 		}
+		kernel_printf( "Can be here\n" );
 	} while ( need_resched() );
-	kernel_printf( "Kankan here\n" );
-
+	//kernel_printf( "Kankan here\n" );
+	kernel_printf( "Cannot be here\n" );
 	//enable_interrupts();
 }
 
@@ -369,14 +463,20 @@ void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context
 {
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *curr = cfs_rq->current_task;
-
-	//update_cfs_clock( cfs_rq );
+	// update_cfs_clock( cfs_rq );
 	//time update
-	copy_context( &( cfs_rq->current_task->context ), pt_context );
-	kernel_printf( "kankan epc: %x", pt_context->epc );
-	//task_tick_fair( cfs_rq, curr );
 
-	//scheduler( pt_context );
+	if ( countx++ == 0 )
+	{
+		copy_context( &( cfs_rq->current_task->context ), pt_context );
+	}
+	// kernel_printf( "kankan epc: %x", pt_context->epc );
+
+	// task_tick_fair( cfs_rq, curr );
+	
+
+	// scheduler( pt_context );
+
 	asm volatile( "mtc0 $zero, $9\n\t" );
 }
 
@@ -404,7 +504,7 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 
 	if ( is_vm )
 	{
-		p->mm = mm_create();
+		//p->mm = mm_create();
 	}
 	else
 	{

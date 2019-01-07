@@ -1,6 +1,6 @@
 #include <arch.h>
 #include <driver/vga.h>
-#include <kos/mm/slab.h>
+#include <kos/slab.h>
 #include <kos/utils.h>
 
 #define KMEM_ADDR( PAGE, BASE ) ( ( ( ( PAGE ) - ( BASE ) ) << PAGE_SHIFT ) | 0x80000000 )

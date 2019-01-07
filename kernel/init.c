@@ -4,13 +4,12 @@
 #include <exc.h>
 #include <intr.h>
 #include <page.h>
-#include <kos/mm/bootmm.h>
-#include <kos/mm/buddy.h>
+#include <kos/bootmm.h>
+#include <kos/buddy.h>
 //#include <kos/fs/fat.h>
 #include <kos/log.h>
 #include <kos/pc/sched.h>
-#include <kos/mm/slab.h>
-#include <kos/tlbload.h>
+#include <kos/slab.h>
 #include <kos/syscall.h>
 #include <kos/time.h>
 
@@ -19,6 +18,12 @@ void machine_info()
 	int row;
 	int col;
 	kernel_printf( "\n%s\n", "kos v1.0" );
+	char *vaddr =(char *) 1;
+	kernel_printf( "start to test vaddr...\n");
+	*vaddr = (char)1;
+	kernel_printf( "vaddr sucess: %x\n",0);
+	char a = *vaddr;
+	kernel_printf( "vaddr sucess: %x\n",a);
 	row = cursor_row;
 	col = cursor_col;
 	cursor_row = 29;
@@ -62,7 +67,7 @@ void init_kernel()
 	log( LOG_OK, "Slab." );
 	log( LOG_END, "Memory Modules." );
 	// virtual memory
-	init_tlbload();
+	//init_tlbload();
 	log( LOG_OK, "TLB LOAD." );
 	// File system
 	//log( LOG_START, "File System." );

@@ -8,6 +8,11 @@
         "sched.h": "c",
         "vmm.h": "c",
         "pid.h": "c",
-        "exc.h": "c"
+        "exc.h": "c",
+        "utils.h": "c",
+        "vm.h": "c",
+        "page.h": "c",
+        "bootmm.h": "c",
+        "ps.h": "c"
     }
 }

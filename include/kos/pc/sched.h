@@ -4,7 +4,7 @@
 #include <kos/pc/rbtree.h>
 #include <kos/kernel.h>
 #include <kos/pc/pid.h>
-#include <kos/vm/vmm.h>
+#include <kos/vm.h>
 
 #define TASK_RUNNING 0  //进程要么正在执行，要么准备执行
 #define TASK_READY 1
@@ -22,6 +22,7 @@
 // #define get_cfs() &( rq.cfs )
 extern struct cfs_rq my_cfs_rq;
 extern struct task_struct idle_task;
+extern struct task_struct *current_task;
 extern int xxxxxxxxxxxxxxx;
 
 //#define current() ( my_cfs_rq.current_task )
@@ -143,6 +144,8 @@ struct reg_context
 	unsigned int ra;
 };
 
+typedef struct reg_context context;
+
 struct load_weight
 {
 	unsigned long weight, inv_weight;
@@ -152,8 +155,8 @@ struct cfs_rq
 {
 	struct load_weight load;
 	unsigned int nr_running;
-	unsigned long long exec_clock;
-	unsigned long long min_vruntime;
+	unsigned long exec_clock;
+	unsigned long min_vruntime;
 
 	struct rb_root tasks_timeline;
 	struct rb_node *rb_leftmost;
@@ -163,9 +166,9 @@ struct cfs_rq
 	struct task_struct *current_task;
 	struct task_struct *idle;
 
-	unsigned long long clock;
-	unsigned long long prev_clock_raw;
-	unsigned long long clock_max_delta;
+	unsigned long clock;
+	unsigned long prev_clock_raw;
+	unsigned long clock_max_delta;
 };
 
 // struct rq
@@ -180,13 +183,13 @@ struct sched_entity
 	struct rb_node run_node;
 	unsigned int on_rq;
 
-	unsigned long long exec_start;
-	unsigned long long sum_exec_runtime;
-	unsigned long long vruntime;
-	unsigned long long prev_sum_exec_runtime;
-	unsigned long long exec_max;
-	unsigned long long wait_start;
-	unsigned long long wait_max;
+	unsigned long exec_start;
+	unsigned long sum_exec_runtime;
+	unsigned long vruntime;
+	unsigned long prev_sum_exec_runtime;
+	unsigned long exec_max;
+	unsigned long wait_start;
+	unsigned long wait_max;
 
 	struct cfs_rq *cfs_rq;
 };
@@ -224,8 +227,8 @@ struct thread_info
 
 union thread_union
 {
-	struct task_struct *task;
-	//unsigned long stack[ PAGE_SIZE / sizeof( long ) ];
+	struct task_struct task;
+	unsigned char kernel_stack[ KERNEL_STACK_SIZE ];
 };
 
 // #define INIT_TASK( tsk )            \

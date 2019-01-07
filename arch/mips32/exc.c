@@ -1,150 +1,260 @@
 #include "exc.h"
 
-/* The only general purpose registers allowed in TLB handlers. */
-#define K0 26
-#define K1 27
-
-/* Some CP0 registers */
-#define C0_INDEX 0, 0
-#define C0_ENTRYLO0 2, 0
-#define C0_TCBIND 2, 2
-#define C0_ENTRYLO1 3, 0
-#define C0_CONTEXT 4, 0
-#define C0_PAGEMASK 5, 0
-#define C0_BADVADDR 8, 0
-#define C0_ENTRYHI 10, 0
-#define C0_EPC 14, 0
-#define C0_XCONTEXT 20, 0
-
-static unsigned int tlb_handler[ 128 ];
+#include <driver/vga.h>
+#include <kos/pc/sched.h>
+#include <kos/utils.h>
+#include <kos/slab.h>
+#include <kos/page.h>
+#include <driver/ps2.h>
 
 #pragma GCC push_options
 #pragma GCC optimize( "O0" )
 
 exc_fn exceptions[ 32 ];
+int count = 0;
+int count_2 = 0;
 
-static void _do_page_fault( PageTableEntry *pte, unsigned int vpn )
-{
-#ifdef TLB_DEBUG
-	kernel_printf( "Begin to do page fault...\n" );
-#endif  //TLB_DEBUG
-	unsigned int phy_page = (unsigned int)alloc_pages( 0 );
-	if ( !phy_page )
-	{
-#ifdef TLB_DEBUG
-		kernel_printf( "fail to malloc pysical memory through buddy...\n" );
-#endif  //TLB_DEBUG
-	}
-	unsigned int pfn = phy_page >> 12;
-#ifdef TLB_DEBUG
-	kernel_printf( "sucessfully get physical address.\n" );
-	kernel_printf( "Vaddr:%x, pfn:%x\n", badVaddr, pfn );
-#endif  //TLB_DEBUG
-	/* write_page_table(pte, pfn)*/
-	//unsigned int acid = current_task->ASID;
-	unsigned int acid = my_cfs_rq.current_task->ASID;
-	pte->EntryLo0.PFN = pfn;
-	pte->EntryLo0.V = 1;
-	pte->EntryHi.VPN2 = vpn;
-	pte->EntryHi.ASID = acid;
-#ifdef TLB_DEBUG
-	kernel_printf( "sucessfully write_page_table(acid,vpn,pfn,1).\n" );
-#endif  //TLB_DEBUG
-}
+// void tlb_refill( unsigned int bad_addr )
+// {
+// 	pgd_t *pgd;
+// 	unsigned int pde_index, pte_index, pte_index_near;
+// 	unsigned int pde, pte, pte_near;
+// 	unsigned int pte_phy, pte_near_phy;
+// 	unsigned int *pde_ptr, pte_ptr;
+// 	unsigned int entry_lo0, entry_lo1;
+// 	unsigned int entry_hi;
 
-void tlb_exception( unsigned int status, unsigned int cause, struct reg_context *pt_context )
-{
-	unsigned int badVaddr;
-	asm volatile(
-	  "mfc0  %0, $8\n\t"  //load from cp0$8
-	  : "=r"( badVaddr ) );
-	if ( badVaddr >= KERNEL_ENTRY )
-	{
-#ifdef TLB_DEBUG
-		kernel_printf( "Invalid Address!!!badVaddr:%x\n", badVaddr );
-#endif  //TLB_DEBUG
-		while ( 1 )
-			;
-	}
-	int index = status >> 1;
-	index &= 0x1;
-	if ( index )
-	{														//index == 1, inside an exception(tlb_refill)
-		exceptions[ 7 & 31 ]( status, cause, pt_context );  // tlb_load
-		return;
-	}
-	/* 页目录 */
-	pgd_t *pgd = my_cfs_rq.current_task->mm->pgd;
-	unsigned int pgdc = (unsigned int)pgd;
-	unsigned int *p;
-	unsigned int vpn = badVaddr >> 12;
-	vpn &= 0x1ffff;  //19 bits
-	unsigned int ptec = pgdc + vpn * sizeof( PageTableEntry );
-	pte_t *pte = (pte_t *)ptec;
-	if ( !pte->EntryLo0.PFN )
-	{
-		_do_page_fault( pte, vpn );
-		return;
-	}
-#ifdef TLB_DEBUG
-	kernel_printf( "Begin to load pte from page table to tlb...\n" );
-	kernel_printf( "vpn:%x, pte's virtualAddr:%x\n", vpn, ptec );
-	kernel_printf( "acid:%x,vpn:%x,pfn:%x\n", pte->EntryHi.ASID, pte->EntryHi.VPN2, pte->EntryLo0.PFN );
-#endif  //TLB_DEBUG                                                                                      \
-		// asm volatile(                                                                                 \
-		//     "mtc0 %0, $4\n\t" //context, page table entry                                             \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "mfc0 $k0, $4\n\t" //context, page table entry                                            \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "lw $k1, 0($k0)\n\t"                                                                      \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "mtc0 $k1, $2\n\t" //copy the first content in page table entry address to EntryLo0       \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "lw $k1, 4($k0)\n\t"                                                                      \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "mtc0 $k1, $3\n\t" //copy the second content in (page table entry address +4) to EntryLo1 \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "lw $k1, 8($k0)\n\t"                                                                      \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "mtc0 $k1, $10\n\t" //copy the third content in (page table entry address +8) to EntryHi  \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "lw $k1, 12($k0)\n\t"                                                                     \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "mtc0 $k1, $5\n\t" //copy the forth content in (page table entry address +12) to PageMask \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "nop\n\t" //CP0 hazard                                                                    \
-		//     "tlbwr\n\t"  //write tlb entry selected by random                                         \
-		//     :"r"(ptec));
-}
+// #ifdef TLB_DEBUG
+// 	unsigned int entry_hi_test;
+// 	asm volatile(
+// 	  "mfc0  $t0, $10\n\t"
+// 	  "move  %0, $t0\n\t"
+// 	  : "=r"( entry_hi_test ) );
 
-void do_exceptions( unsigned int status, unsigned int cause, struct reg_context *pt_context )
+// 	kernel_printf( "tlb_refill: bad_addr = %x    entry_hi = %x \n", bad_addr, entry_hi_test );
+// 	kernel_printf( "%x  %d\n", current_task, current_task->pid );
+// #endif
+// 	if ( current_task->mm == 0 )
+// 	{
+// 		kernel_printf( "tlb_refill: mm is null!!!  %d\n", current_task->pid );
+// 		goto error_0;
+// 	}
+
+// 	pgd = current_task->mm->pgd;
+// 	if ( pgd == 0 )
+// 	{
+// 		kernel_printf( "tlb_refill: pgd == NULL\n" );
+// 		goto error_0;
+// 	}
+
+// 	bad_addr &= PAGE_MASK;
+
+// 	//搜索bad_addr是否在vma中,如果不在任何vma中，报错
+// 	//.......
+// 	//To be done
+
+// 	pde_index = bad_addr >> PGD_SHIFT;
+// 	pde = pgd[ pde_index ];
+// 	pde &= PAGE_MASK;
+// 	if ( pde == 0 )
+// 	{  //二级页表不存在
+// 		pde = (unsigned int)kmalloc( PAGE_SIZE );
+
+// #ifdef TLB_DEBUG
+// 		kernel_printf( "second page table not exist\n" );
+// #endif
+
+// 		if ( pde == 0 )
+// 		{
+// 			kernel_printf( "tlb_refill: alloc second page table failed!\n" );
+// 			goto error_0;
+// 		}
+
+// 		kernel_memset( (void *)pde, 0, PAGE_SIZE );
+// 		pgd[ pde_index ] = pde;
+// 		pgd[ pde_index ] &= PAGE_MASK;
+// 		pgd[ pde_index ] |= 0x0f;  //attr
+// 	}
+
+// #ifdef VMA_DEBUG
+// 	kernel_printf( "tlb refill: %x\n", pde );
+// #endif
+// 	pde_ptr = (unsigned int *)pde;
+// 	pte_index = ( bad_addr >> PAGE_SHIFT ) & INDEX_MASK;
+// 	pte = pde_ptr[ pte_index ];
+// 	pte &= PAGE_MASK;
+// 	if ( pte == 0 )
+// 	{
+// #ifdef TLB_DEBUG
+// 		kernel_printf( "page not exist\n" );
+// #endif
+
+// 		pte = (unsigned int)kmalloc( PAGE_SIZE );  //要考虑物理地址？？？
+
+// 		if ( pte == 0 )
+// 		{
+// 			kernel_printf( "tlb_refill: alloc page failed!\n" );
+// 			goto error_0;
+// 		}
+
+// 		kernel_memset( (void *)pte, 0, PAGE_SIZE );
+// 		pde_ptr[ pte_index ] = pte;
+// 		pde_ptr[ pte_index ] &= PAGE_MASK;
+// 		pde_ptr[ pte_index ] |= 0x0f;
+// 	}
+
+// 	pte_index_near = pte_index ^ 0x01;
+// 	pte_near = pde_ptr[ pte_index_near ];
+// 	pte_near &= PAGE_MASK;
+
+// #ifdef VMA_DEBUG
+// 	kernel_printf( "pte: %x pte_index: %x  pte_near_index: %x\n", pte, pte_index, pte_index_near );
+// #endif
+
+// 	if ( pte_near == 0 )
+// 	{  //附近项 为空
+// #ifdef TLB_DEBUG
+// 		kernel_printf( "page near not exist\n" );
+// #endif
+
+// 		pte_near = (unsigned int)kmalloc( PAGE_SIZE );
+
+// 		if ( pte_near == 0 )
+// 		{
+// 			kernel_printf( "tlb_refill: alloc pte_near failed!\n" );
+// 			goto error_0;
+// 		}
+
+// 		kernel_memset( (void *)pte_near, 0, PAGE_SIZE );
+// 		pde_ptr[ pte_index_near ] = pte_near;
+// 		pde_ptr[ pte_index_near ] &= PAGE_MASK;
+// 		pde_ptr[ pte_index_near ] |= 0x0f;
+// 	}
+
+// 	//换成物理地址
+// 	pte_phy = pte - 0x80000000;
+// 	pte_near_phy = pte_near - 0x80000000;
+// #ifdef TLB_DEBUG
+// 	kernel_printf( "pte: %x  %x\n", pte_phy, pte_near_phy );
+// #endif
+// 	//
+// 	if ( pte_index & 0x01 == 0 )
+// 	{  //偶
+// 		entry_lo0 = ( pte_phy >> 12 ) << 6;
+// 		entry_lo1 = ( pte_near_phy >> 12 ) << 6;
+// 	}
+// 	else
+// 	{
+// 		entry_lo0 = ( pte_near_phy >> 12 ) << 6;
+// 		entry_lo1 = ( pte_near >> 12 ) << 6;
+// 	}
+// 	entry_lo0 |= ( 3 << 3 );  //cached ??
+// 	entry_lo1 |= ( 3 << 3 );  //cached ??
+// 	entry_lo0 |= 0x06;		  //D = 1, V = 1, G = 0
+// 	entry_lo1 |= 0x06;
+
+// 	entry_hi = ( bad_addr & PAGE_MASK ) & ( ~( 1 << PAGE_SHIFT ) );
+// 	entry_hi |= current_task->ASID;
+
+// #ifdef TLB_DEBUG
+// 	kernel_printf( "pid: %d\n", current_task->pid );
+// 	kernel_printf( "tlb_refill: entry_hi: %x  entry_lo0: %x  entry_lo1: %x\n", entry_hi, entry_lo0, entry_lo1 );
+// #endif
+
+// 	asm volatile(
+// 	  "move $t0, %0\n\t"
+// 	  "move $t1, %1\n\t"
+// 	  "move $t2, %2\n\t"
+// 	  "mtc0 $t0, $10\n\t"
+// 	  "mtc0 $zero, $5\n\t"
+// 	  "mtc0 $t1, $2\n\t"
+// 	  "mtc0 $t2, $3\n\t"
+// 	  "nop\n\t"
+// 	  "nop\n\t"
+// 	  "tlbwr\n\t"
+// 	  "nop\n\t"
+// 	  "nop\n\t"
+// 	  :
+// 	  : "r"( entry_hi ),
+// 		"r"( entry_lo0 ),
+// 		"r"( entry_lo1 ) );
+
+// 	kernel_printf( "after refill\n" );
+// 	unsigned int *pgd_ = current_task->mm->pgd;
+// 	unsigned int pde_, pte_;
+// 	unsigned int *pde_ptr_;
+// 	int i, j;
+// 	count_2++;
+
+// 	for ( i = 0; i < 1024; i++ )
+// 	{
+// 		pde_ = pgd_[ i ];
+// 		pde_ &= PAGE_MASK;
+
+// 		if ( pde_ == 0 )  //不存在二级页表
+// 			continue;
+// 		kernel_printf( "pde: %x\n", pde_ );
+// 		pde_ptr_ = (unsigned int *)pde_;
+// 		for ( j = 0; j < 1024; j++ )
+// 		{
+// 			pte_ = pde_ptr_[ j ];
+// 			pte_ &= PAGE_MASK;
+// 			if ( pte_ != 0 )
+// 			{
+// 				kernel_printf( "\tpte: %x\n", pte_ );
+// 			}
+// 		}
+// 	}
+// 	// if (count_2 == 4) {
+// 	//     kernel_printf("")
+// 	//     while(1)
+// 	//         ;
+// 	// }
+
+// 	return;
+
+// error_0:
+// 	while ( 1 )
+// 		;
+// }
+
+void do_exceptions( unsigned int status, unsigned int cause, context *pt_context, unsigned int bad_addr )
 {
 	int index = cause >> 2;
 	index &= 0x1f;
+
+#ifdef TLB_DEBUG
+	unsigned int count;
+#endif
+
+	if ( index == 2 || index == 3 )
+	{
+		//tlb_refill( bad_addr );
+#ifdef TLB_DEBUG
+		kernel_printf( "refill done\n" );
+
+		//count = 0x
+		// kernel_getchar();
+#endif
+		return;
+	}
+
 	if ( exceptions[ index ] )
 	{
 		exceptions[ index ]( status, cause, pt_context );
 	}
 	else
 	{
-		struct task_struct *pcb = my_cfs_rq.current_task;
+		struct task_struct *pcb;
 		unsigned int badVaddr;
 		asm volatile( "mfc0 %0, $8\n\t"
 					  : "=r"( badVaddr ) );
-		// pcb = get_curr_pcb();
-		//kernel_printf( "Here !!!!\n" );
+		//modified by Ice
+		pcb = current_task;
 		kernel_printf( "\nProcess %s exited due to exception cause=%x;\n", pcb->name, cause );
 		kernel_printf( "status=%x, EPC=%x, BadVaddr=%x\n", status, pcb->context.epc, badVaddr );
-		//pc_kill_syscall(status, cause, pt_context);
+		//    pc_kill_syscall(status, cause, pt_context);
+		//Done by Ice
 		while ( 1 )
 			;
 	}

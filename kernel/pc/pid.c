@@ -1,6 +1,6 @@
 #include <kos/pc/sched.h>
 #include <driver/vga.h>
-#include <kos/mm/bootmm.h>
+#include <kos/bootmm.h>
 
 static pidmap_t pidmap_array[ 100 ];
 static struct hlist_head *pid_hash;
@@ -82,25 +82,25 @@ void free_pidmap( int pid )
 
 void pidhash_initial()
 {
-	//int pidhash_size = 1;
-	int pidhash_size = 1 << 5;  //32
-	//int pidhash_size = 1 << pidhash_shift;  //2048
-	unsigned char *p = alloc_bootmem( pidhash_size * sizeof( *( pid_hash ) ) );
-	pid_hash = (struct hlist_head *)( (unsigned int)p | 0x80000000 );
-	//kernel_printf( "why cannot pass this?\n" );
-	// kernel_printf( "%x\n", pid_hash );
+	// //int pidhash_size = 1;
+	// int pidhash_size = 1 << 5;  //32
+	// //int pidhash_size = 1 << pidhash_shift;  //2048
+	// unsigned char *p = alloc_bootmem( pidhash_size * sizeof( *( pid_hash ) ) );
+	// pid_hash = (struct hlist_head *)( (unsigned int)p | 0x80000000 );
+	// //kernel_printf( "why cannot pass this?\n" );
+	// // kernel_printf( "%x\n", pid_hash );
 
-	// *p = 0x12;
-	// kernel_printf( "content: %x", *p );
-	if ( !pid_hash )
-		kernel_printf( "Could not alloc pidhash!\n" );
+	// // *p = 0x12;
+	// // kernel_printf( "content: %x", *p );
+	// if ( !pid_hash )
+	// 	kernel_printf( "Could not alloc pidhash!\n" );
 
+	// // for ( int i = 0; i < pidhash_size; i++ )
+	// // {
+	// // 	kernel_printf( "%x: %x\n", i, pid_hash[ i ] );
+	// // }
 	// for ( int i = 0; i < pidhash_size; i++ )
-	// {
-	// 	kernel_printf( "%x: %x\n", i, pid_hash[ i ] );
-	// }
-	for ( int i = 0; i < pidhash_size; i++ )
-		INIT_HLIST_HEAD( &pid_hash[ i ] );
+	// 	INIT_HLIST_HEAD( &pid_hash[ i ] );
 
 	//kernel_printf( "Let's try again, why cannot pass this?\n" );
 }

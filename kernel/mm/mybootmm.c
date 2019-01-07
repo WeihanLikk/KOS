@@ -1,6 +1,6 @@
 #include <arch.h>
 #include <driver/vga.h>
-#include <kos/mm/bootmm.h>
+#include <kos/bootmm.h>
 #include <kos/utils.h>
 
 struct bootmm bmm;

@@ -1,3 +1,3 @@
-OBJS := bootmm.o buddy.o slab.o
+OBJS := mybootmm.o mybuddy.o myslab.o
 
 include $(SUB_MAKE_INCLUDE)
