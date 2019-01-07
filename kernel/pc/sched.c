@@ -1,5 +1,5 @@
 #include <kos/pc/sched.h>
-//#include <kos/vm/vmm.h>
+// #include <kos/vm/vmm.h>
 #include <driver/vga.h>
 #include <intr.h>
 #include <kos/log.h>
@@ -208,12 +208,12 @@ int testtest()
 
 int asdasd()
 {
-	kernel_printf( "asdasdasd !!!!!!!!!\n" );
 	int countxx = 0;
+	kernel_printf( "asdasdasd !!!!!!!!!\n" );
 	for ( int i = 0; i < 10000000; i++ )
 	{
 		countxx++;
-		if ( countxx % 1000 == 0 )
+		if ( countxx % 100000 == 0 )
 		{
 			kernel_printf( "I can do it\n" );
 		}
