@@ -61,17 +61,23 @@ struct mm_struct *mm_create()
 
 void *memset( void *dest, int b, int len )
 {
-#ifdef VM_DEBUG
+#ifdef MEMSET_DEBUG
 	kernel_printf( "memset:%x,%x,len%x,", (int)dest, b, len );
 #endif  // ! MEMSET_DEBUG
 	char content = b ? -1 : 0;
 	char *deststr = dest;
+#ifdef MEMSET_DEBUG
+	kernel_printf( "deststr, content:%x\n" ,content);
+#endif  // ! MEMSET_DEBUG
 	while ( len-- )
 	{
+#ifdef MEMSET_DEBUG
+	kernel_printf( "in while\n");
+#endif  // ! MEMSET_DEBUG
 		*deststr = content;  //will cause tlb miss
 		deststr++;
 	}
-#ifdef VM_DEBUG
+#ifdef MEMSET_DEBUG
 	kernel_printf( "%x\n", (int)deststr );
 #endif  // ! MEMSET_DEBUG
 	return dest;

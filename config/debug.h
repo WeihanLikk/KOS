@@ -8,7 +8,7 @@
 // #define VGA_CALIBRATE
 
 // memset
-// #define MEMSET_DEBUG
+#define MEMSET_DEBUG
 
 // boot mem
 // #define BOOTMM_DEBUG
