@@ -36,19 +36,39 @@ int count_2 = 0;
 int exl;
 
 void do_tlb_refill(unsigned int status, unsigned int cause, context *pt_context,  unsigned int badVaddr ){
-    kernel_printf("In do_tlbrefill: badVaddr:%x\n",badVaddr);
+    kernel_printf("In do_tlb_refill: badVaddr %x, ",badVaddr);
+	int has_vma = 1;
 	if(badVaddr >= 0x80000000){
-        #ifdef TLB_DEBUG
-            kernel_printf("Invalid Address!!!badVaddr:%x\n",badVaddr);
-        #endif //TLB_DEBUG
-        while (1)
-            ;
+        kernel_printf("In do_tlb_refill: Invalid Address!!!badVaddr:%x\n",badVaddr);
+		goto Error;
     }
-	//if(badVaddr is not in vma){}
-	kernel_printf("status:%x\n",status);
-	int index = status >> 1;
-    index &= 0x1;
-	kernel_printf("exl:%x\n",exl);
+	if ( current_task == 0 )
+	{
+		kernel_printf( "In do_tlb_refill: current_task == 0.\n");
+		goto Error;
+	}else{
+	 #ifdef TLB_DEBUG
+         kernel_printf("current_task->pid:%x\n",current_task->pid);
+     #endif //TLB_DEBUG
+	}
+	if ( current_task->mm == 0 )
+	{
+		kernel_printf( "In do_tlb_refill: mm null! pid: %d\n", current_task->pid );
+		goto Error;
+	}
+	if ( current_task->mm->map_count == 0)
+	{
+		kernel_printf( "In do_tlb_refill: no vma! pid: %d\n", current_task->pid );
+		has_vma = 0;
+		goto judge;
+	}
+	int flag = is_in_vma(badVaddr);
+	if (!flag)
+	{
+		kernel_printf( "In do_tlb_refill: not in vma! pid: %d\n", current_task->pid );
+		goto Error;
+	}
+judge:
 	if(exl == 1){
 	 //exl == 1, inside an exception(tlb_refill)
 	 #ifdef TLB_DEBUG
@@ -59,21 +79,25 @@ void do_tlb_refill(unsigned int status, unsigned int cause, context *pt_context,
     }
 	else if(exl){
 	    #ifdef TLB_DEBUG
-            kernel_printf("Error!!!badVaddr:%x\n",badVaddr);
+            kernel_printf("In do_tlb_refill: EXL Error!!!badVaddr:%x\n",badVaddr);
         #endif //TLB_DEBUG
-        while (1)
-            ;		
+		goto Error;		
 	} 
 	exl++; //change exl = 1, represent that now we are in an excpetion
-	// if there nots exist a process
-	 #ifdef TLB_DEBUG
-        //    kernel_printf("current_task:%x,current_task->pid:%x\n",current_task,current_task->pid);
-     #endif //TLB_DEBUG
-	//if(current_task->pid==0){
-	if(1){
-	#ifdef TLB_DEBUG
-            kernel_printf("current_task is not a user process\n");
-    #endif //TLB_DEBUG
+	// if there not exists a process
+	if(has_vma==0){
+		#ifdef TLB_DEBUG
+				kernel_printf("do not has vma.\n");
+		#endif //TLB_DEBUG
+		badVaddr &= PAGE_MASK;
+		pgd_t* pgd = current_task->mm->pgd;
+		unsigned int pde_index = badVaddr >> PGD_SHIFT;
+		pgd_t pte = pgd[ pde_index ]; // can cause tbl_refill again
+		if ( pgd == 0 )
+		{
+			kernel_printf( "pgd null. should in tlb load but not.\n" );
+			goto Error;
+		}
 		unsigned int paddr0,paddr1, pfn0,pfn1 , vpn;
 		unsigned int entry_lo0, entry_lo1;
 		unsigned int entry_hi, pagemask;
@@ -178,6 +202,10 @@ void do_tlb_refill(unsigned int status, unsigned int cause, context *pt_context,
     }
 	// when finish change exl = 0
 	exl = 0;
+	return ;
+Error:
+	while(1)
+	;
 }
 
 // void do_tlbrefill(unsigned int status, unsigned int cause, context *pt_context,  unsigned int bad_addr )
@@ -388,7 +416,7 @@ void do_exceptions( unsigned int status, unsigned int cause, context *pt_context
 {
 	int index = cause >> 2;
 	index &= 0x1f;
-	if(bad_addr < 0x80000000){
+	if ( index == 2 || index == 3 ){
 		do_tlb_refill(status,cause,pt_context, bad_addr );
  #ifdef TLB_DEBUG
 		kernel_printf( "badVaddr: %x, refill done\n" ,bad_addr);
