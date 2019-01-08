@@ -500,7 +500,7 @@ void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context
 {
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *curr = cfs_rq->current_task;
-	update_cfs_clock( cfs_rq );
+	//update_cfs_clock( cfs_rq );
 	//time update
 
 	task_tick_fair( cfs_rq, curr );
@@ -518,7 +518,7 @@ void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context
 
 	//task_tick_fair( cfs_rq, curr );
 
-	scheduler( pt_context );
+	//scheduler( pt_context );
 	//struct task_struct *prev, *next;
 	//prev = cfs_rq->current_task;
 	//put_prev_task_fair( cfs_rq, prev );

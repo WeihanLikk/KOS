@@ -8,13 +8,13 @@
 // // #define VGA_CALIBRATE
 
 // memset
-#define MEMSET_DEBUG
+// #define MEMSET_DEBUG
 
 // // boot mem
 // // #define BOOTMM_DEBUG
 
 // // slab: display debug info
-#define SLAB_DEBUG
+// #define SLAB_DEBUG
 // #define BUDDY_DEBUG
 
 // // myvi: display debug info

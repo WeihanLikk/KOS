@@ -31,7 +31,7 @@ typedef struct {
     __PageMask PageMask;
 } PageTableEntry;
 
-#define pgd_t PageTableEntry;
-#define pte_t PageTableEntry;
+#define pgd_t PageTableEntry
+#define pte_t PageTableEntry
 
 #endif
