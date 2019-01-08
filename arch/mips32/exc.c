@@ -10,80 +10,85 @@
 #include <driver/ps2.h>
 
 /* The only general purpose registers allowed in TLB handlers. */
-#define K0		26
-#define K1		27
+#define K0 26
+#define K1 27
 
 /* Some CP0 registers */
-#define C0_INDEX	0, 0
-#define C0_ENTRYLO0	2, 0
-#define C0_TCBIND	2, 2
-#define C0_ENTRYLO1	3, 0
-#define C0_CONTEXT	4, 0
-#define C0_PAGEMASK	5, 0
-#define C0_BADVADDR	8, 0
-#define C0_ENTRYHI	10, 0
-#define C0_EPC		14, 0
-#define C0_XCONTEXT	20, 0
-
+#define C0_INDEX 0, 0
+#define C0_ENTRYLO0 2, 0
+#define C0_TCBIND 2, 2
+#define C0_ENTRYLO1 3, 0
+#define C0_CONTEXT 4, 0
+#define C0_PAGEMASK 5, 0
+#define C0_BADVADDR 8, 0
+#define C0_ENTRYHI 10, 0
+#define C0_EPC 14, 0
+#define C0_XCONTEXT 20, 0
 
 #pragma GCC push_options
 #pragma GCC optimize( "O0" )
 
-static unsigned int tlb_handler[128];
+static unsigned int tlb_handler[ 128 ];
 exc_fn exceptions[ 32 ];
 int count = 0;
 int count_2 = 0;
 int exl;
 
-void do_tlb_refill(unsigned int status, unsigned int cause, context *pt_context,  unsigned int badVaddr ){
-    kernel_printf("In do_tlbrefill: badVaddr:%x\n",badVaddr);
-	if(badVaddr >= 0x80000000){
-        #ifdef TLB_DEBUG
-            kernel_printf("Invalid Address!!!badVaddr:%x\n",badVaddr);
-        #endif //TLB_DEBUG
-        while (1)
-            ;
-    }
+void do_tlb_refill( unsigned int status, unsigned int cause, context *pt_context, unsigned int badVaddr )
+{
+	kernel_printf( "In do_tlbrefill: badVaddr:%x\n", badVaddr );
+	if ( badVaddr >= 0x80000000 )
+	{
+#ifdef TLB_DEBUG
+		kernel_printf( "Invalid Address!!!badVaddr:%x\n", badVaddr );
+#endif  //TLB_DEBUG
+		while ( 1 )
+			;
+	}
 	//if(badVaddr is not in vma){}
-	kernel_printf("status:%x\n",status);
+	kernel_printf( "status:%x\n", status );
 	int index = status >> 1;
-    index &= 0x1;
-	kernel_printf("exl:%x\n",exl);
-	if(exl == 1){
-	 //exl == 1, inside an exception(tlb_refill)
-	 #ifdef TLB_DEBUG
-            kernel_printf("exl=1, inside an exception(tlb_refill),badVaddr:%x\n",badVaddr);
-     #endif //TLB_DEBUG
-        exceptions[7 & 31](status, cause, pt_context); // tlb_load
-        return ;
-    }
-	else if(exl){
-	    #ifdef TLB_DEBUG
-            kernel_printf("Error!!!badVaddr:%x\n",badVaddr);
-        #endif //TLB_DEBUG
-        while (1)
-            ;		
-	} 
-	exl++; //change exl = 1, represent that now we are in an excpetion
-	// if there nots exist a process
-	 #ifdef TLB_DEBUG
-            kernel_printf("current_task:%x,current_task->pid:%x\n",current_task,current_task->pid);
-     #endif //TLB_DEBUG
-	if(current_task->pid==0){
-	#ifdef TLB_DEBUG
-            kernel_printf("current_task is not a user process\n");
-    #endif //TLB_DEBUG
-	unsigned int paddr, pfn , vpn;
-	unsigned int entry_lo0, entry_lo1;
-	unsigned int entry_hi, pagemask;
+	index &= 0x1;
+	kernel_printf( "exl:%x\n", exl );
+	if ( exl == 1 )
+	{
+//exl == 1, inside an exception(tlb_refill)
+#ifdef TLB_DEBUG
+		kernel_printf( "exl=1, inside an exception(tlb_refill),badVaddr:%x\n", badVaddr );
+#endif														//TLB_DEBUG
+		exceptions[ 7 & 31 ]( status, cause, pt_context );  // tlb_load
+		return;
+	}
+	else if ( exl )
+	{
+#ifdef TLB_DEBUG
+		kernel_printf( "Error!!!badVaddr:%x\n", badVaddr );
+#endif  //TLB_DEBUG
+		while ( 1 )
+			;
+	}
+	exl++;  //change exl = 1, represent that now we are in an excpetion
+			// if there nots exist a process
+#ifdef TLB_DEBUG
+	kernel_printf( "current_task:%x,current_task->pid:%x\n", current_task, current_task->pid );
+#endif  //TLB_DEBUG
+	if ( current_task->pid == 0 )
+	{
+#ifdef TLB_DEBUG
+		kernel_printf( "current_task is not a user process\n" );
+#endif  //TLB_DEBUG
+		unsigned int paddr, pfn, vpn;
+		unsigned int entry_lo0, entry_lo1;
+		unsigned int entry_hi, pagemask;
 		//fill_vaddr_into_tlb
-		paddr = (unsigned int)alloc_pages(1);
-		if(!paddr){
-		#ifdef TLB_DEBUG
-				kernel_printf("physical page alloc fail!\n");
-		while(1)
-		;
-		#endif //TLB_DEBUG	
+		paddr = (unsigned int)alloc_pages( 1 );
+		if ( !paddr )
+		{
+#ifdef TLB_DEBUG
+			kernel_printf( "physical page alloc fail!\n" );
+			while ( 1 )
+				;
+#endif  //TLB_DEBUG
 		}
 		pfn = paddr >> PAGE_SHIFT;
 		vpn = badVaddr >> PAGE_SHIFT;
@@ -94,64 +99,63 @@ void do_tlb_refill(unsigned int status, unsigned int cause, context *pt_context,
 		entry_lo0 += 2;
 		entry_lo1 = 0;
 		pagemask = 0x8ff;
-		#ifdef TLB_DEBUG
-			kernel_printf("vpn: %x, pfn: %x, entry_hi: %x, entry_lo0: %x, entry_lo1: %x, pagemask:%x\n",vpn,pfn,entry_hi,entry_lo0,entry_lo1,pagemask);
-		#endif
+#ifdef TLB_DEBUG
+		kernel_printf( "vpn: %x, pfn: %x, entry_hi: %x, entry_lo0: %x, entry_lo1: %x, pagemask:%x\n", vpn, pfn, entry_hi, entry_lo0, entry_lo1, pagemask );
+#endif
 		unsigned int context_cp0;
-		asm volatile(  
-			"mfc0 %0, $4\n\t" //context, page table entry
-			"nop\n\t" //CP0 hazard
-			"mtc0 %1, $10\n\t" //context, page table entry                                            
-		    "nop\n\t" //CP0 hazard                                                                       
-			:"=r"(context_cp0)                                   
-		    :"r"(entry_hi));
-		asm volatile(  
-			"mfc0 %0, $4\n\t" 
-			"nop\n\t" //CP0 hazard
-			"mtc0 %1, $2\n\t" //context, page table entry                                            
-		    "nop\n\t" //CP0 hazard                                                                       
-			:"=r"(context_cp0)                                   
-		    :"r"(entry_lo0));
-		asm volatile(  
-			"mfc0 %0, $4\n\t"
-			"nop\n\t" //CP0 hazard
-			"mtc0 %1, $3\n\t" //context, page table entry                                            
-		    "nop\n\t" //CP0 hazard                                                                       
-			:"=r"(context_cp0)                                   
-		    :"r"(entry_lo1));
-		asm volatile(  
-			"mfc0 %0, $4\n\t" 
-			"nop\n\t" //CP0 hazard
-			"mtc0 %1, $5\n\t" //context, page table entry                                            
-		    "nop\n\t" //CP0 hazard                                                                       
-			:"=r"(context_cp0)                                   
-		    :"r"(pagemask));
-		asm volatile(  
-			"tlbwr\n\t"
-		    "nop\n\t"
-			"nop\n\t"
-		);
+		asm volatile(
+		  "mfc0 %0, $4\n\t"   //context, page table entry
+		  "nop\n\t"			  //CP0 hazard
+		  "mtc0 %1, $10\n\t"  //context, page table entry
+		  "nop\n\t"			  //CP0 hazard
+		  : "=r"( context_cp0 )
+		  : "r"( entry_hi ) );
+		asm volatile(
+		  "mfc0 %0, $4\n\t"
+		  "nop\n\t"			 //CP0 hazard
+		  "mtc0 %1, $2\n\t"  //context, page table entry
+		  "nop\n\t"			 //CP0 hazard
+		  : "=r"( context_cp0 )
+		  : "r"( entry_lo0 ) );
+		asm volatile(
+		  "mfc0 %0, $4\n\t"
+		  "nop\n\t"			 //CP0 hazard
+		  "mtc0 %1, $3\n\t"  //context, page table entry
+		  "nop\n\t"			 //CP0 hazard
+		  : "=r"( context_cp0 )
+		  : "r"( entry_lo1 ) );
+		asm volatile(
+		  "mfc0 %0, $4\n\t"
+		  "nop\n\t"			 //CP0 hazard
+		  "mtc0 %1, $5\n\t"  //context, page table entry
+		  "nop\n\t"			 //CP0 hazard
+		  : "=r"( context_cp0 )
+		  : "r"( pagemask ) );
+		asm volatile(
+		  "tlbwr\n\t"
+		  "nop\n\t"
+		  "nop\n\t" );
 		// when finish change exl = 0
 		exl = 0;
-		return ;
+		return;
 	}
 	//在page table中查找触发tlb_refill异常的bad address
 	/* 页目录 */
-    PageTableEntry* pgd = current_task->mm->pgd;
-	#ifdef TLB_DEBUG
-            kernel_printf("pgd:%x,vbadVaddr:%x\n",pgd,badVaddr);
-    #endif //TLB_DEBUG
-    unsigned int pgdc = (unsigned int)pgd;
-    unsigned int *p;
-    unsigned int vpn = badVaddr >> 12;
-    vpn &= 0x1ffff; //19 bits
-    unsigned int ptec = pgdc + vpn * sizeof(PageTableEntry);
-    PageTableEntry* pte = (PageTableEntry*)ptec;
-    if(!pte->EntryLo0.PFN){
-
-       // _do_page_fault(pte,vpn);
-        return ;
-    }
+	PageTableEntry *pgd = current_task->mm->pgd;
+#ifdef TLB_DEBUG
+	kernel_printf( "pgd:%x,vbadVaddr:%x\n", pgd, badVaddr );
+#endif  //TLB_DEBUG
+	unsigned int pgdc = (unsigned int)pgd;
+	unsigned int *p;
+	unsigned int vpn = badVaddr >> 12;
+	vpn &= 0x1ffff;  //19 bits
+	unsigned int ptec = pgdc + vpn * sizeof( PageTableEntry );
+	PageTableEntry *pte = (PageTableEntry *)ptec;
+	if ( !pte->EntryLo0.PFN )
+	{
+		// _do_page_fault(pte,vpn);
+		return;
+	}
 	// when finish change exl = 0
 	exl = 0;
 }
@@ -364,20 +368,20 @@ void do_exceptions( unsigned int status, unsigned int cause, context *pt_context
 {
 	int index = cause >> 2;
 	index &= 0x1f;
-	if(bad_addr < 0x80000000){
-		do_tlb_refill(status,cause,pt_context, bad_addr );
- #ifdef TLB_DEBUG
-		kernel_printf( "badVaddr: %x, refill done\n" ,bad_addr);
+	if ( bad_addr < 0x80000000 )
+	{
+		//do_tlb_refill(status,cause,pt_context, bad_addr );
+#ifdef TLB_DEBUG
+		kernel_printf( "badVaddr: %x, refill done\n", bad_addr );
 
 		//count = 0x
 		// kernel_getchar();
- #endif
-		return;		
+#endif
+		return;
 	}
 #ifdef TLB_DEBUG
 	unsigned int count;
 #endif
-
 
 	if ( exceptions[ index ] )
 	{

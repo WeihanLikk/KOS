@@ -565,7 +565,7 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	p->pid = newpid;
 	p->parent = cfs_rq->current_task->pid;
 	p->policy = SCHED_NORMAL;
-	p->prioiry = 130;
+	p->prioiry = 120;
 	p->THREAD_FLAG = 0;
 
 	kernel_memset( &( p->se ), 0, sizeof( struct sched_entity ) );
@@ -635,7 +635,7 @@ static int execproc( unsigned int argc, void *args )
 int test_vm( unsigned int argc, void *args )
 {
 	kernel_printf( "I am here\n" );
-	//do_exit();
+	do_exit();
 }
 
 int execk( unsigned int argc, void *args, int is_wait )
