@@ -2,7 +2,6 @@
 #include <arch.h>
 #include <kos/tlbload.h>
 #include <kos/mm/buddy.h>
-#include <driver/vga.h>
 
 void init_tlbload()
 {

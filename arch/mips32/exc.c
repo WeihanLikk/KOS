@@ -67,94 +67,70 @@ void do_tlb_refill(unsigned int status, unsigned int cause, context *pt_context,
 	exl++; //change exl = 1, represent that now we are in an excpetion
 	// if there nots exist a process
 	 #ifdef TLB_DEBUG
-        //    kernel_printf("current_task:%x,current_task->pid:%x\n",current_task,current_task->pid);
+            kernel_printf("current_task:%x,current_task->pid:%x\n",current_task,current_task->pid);
      #endif //TLB_DEBUG
-	//if(current_task->pid==0){
-	if(1){
+	if(current_task->pid==0){
 	#ifdef TLB_DEBUG
             kernel_printf("current_task is not a user process\n");
     #endif //TLB_DEBUG
-		unsigned int paddr0,paddr1, pfn0,pfn1 , vpn;
-		unsigned int entry_lo0, entry_lo1;
-		unsigned int entry_hi, pagemask;
+	unsigned int paddr, pfn , vpn;
+	unsigned int entry_lo0, entry_lo1;
+	unsigned int entry_hi, pagemask;
 		//fill_vaddr_into_tlb
-		paddr0 = (unsigned int)kmalloc(PAGE_SIZE);
-		paddr1 = (unsigned int)kmalloc(PAGE_SIZE);
-
-		if(!paddr0 || !paddr1){
+		paddr = (unsigned int)alloc_pages(1);
+		if(!paddr){
 		#ifdef TLB_DEBUG
 				kernel_printf("physical page alloc fail!\n");
 		while(1)
 		;
 		#endif //TLB_DEBUG	
 		}
-		//换成物理地址
-    	unsigned int paddr0_phy = paddr0-0x80000000;
-    	unsigned int paddr1_phy = paddr1-0x80000000;
-		#ifdef TLB_DEBUG
-				kernel_printf("paddr0_phy:%x,paddr1_phy\n",paddr0_phy,paddr1_phy);
-		#endif //TLB_DEBUG	
-		pfn0 = paddr0_phy >> PAGE_SHIFT;
-		pfn1 = paddr1_phy >> PAGE_SHIFT;
+		pfn = paddr >> PAGE_SHIFT;
 		vpn = badVaddr >> PAGE_SHIFT;
 		// set acid = 0 for no process
-		entry_hi = (badVaddr & PAGE_MASK) & (~(1 << PAGE_SHIFT));
-
-		entry_lo0 = pfn0 << 6;
-		entry_lo1 = pfn1 << 6;
-		
-    	entry_lo0 |= (3 << 3);   //cached ??
-    	entry_lo1 |= (3 << 3);   //cached ????????? why????
-		entry_lo0 |= 0x06;
-		entry_lo1 |= 0x06; //D = 1, V = 1, G = 0
-		pagemask = 0;
+		entry_hi = vpn << 13;
+		entry_lo0 = pfn << 6;
+		// set v = 1
+		entry_lo0 += 2;
+		entry_lo1 = 0;
+		pagemask = 0x8ff;
 		#ifdef TLB_DEBUG
-			kernel_printf("vpn: %x, pfn0: %x, pfn1: %x, entry_hi: %x, entry_lo0: %x, entry_lo1: %x, pagemask:%x\n",vpn,pfn0,pfn1,entry_hi,entry_lo0,entry_lo1,pagemask);
+			kernel_printf("vpn: %x, pfn: %x, entry_hi: %x, entry_lo0: %x, entry_lo1: %x, pagemask:%x\n",vpn,pfn,entry_hi,entry_lo0,entry_lo1,pagemask);
 		#endif
-    asm volatile (
-        "move $t0, %0\n\t"
-        "move $t1, %1\n\t"
-        "move $t2, %2\n\t"
-        "mtc0 $t0, $10\n\t"
-        "mtc0 $zero, $5\n\t"
-        "mtc0 $t1, $2\n\t"
-        "mtc0 $t2, $3\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        "tlbwr\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        :
-        : "r"(entry_hi),
-          "r"(entry_lo0),
-          "r"(entry_lo1)
-    );
-	   #ifdef  TLB_DEBUG
-    unsigned int entry_hi_test;
-        asm volatile( 
-            "mfc0  $t0, $10\n\t"
-            "move  %0, $t0\n\t"
-            : "=r"(entry_hi_test)
-        );
-    
-    kernel_printf("tlb_refill: entry_hi = %x \n",entry_hi_test);
-	    unsigned int entry_lo0_test;
-        asm volatile( 
-            "mfc0  $t0, $2\n\t"
-            "move  %0, $t0\n\t"
-            : "=r"(entry_hi_test)
-        );
-    
-    kernel_printf("tlb_refill: entry_lo0 = %x \n",entry_lo0_test);
-		    unsigned int entry_lo1_test;
-        asm volatile( 
-            "mfc0  $t0, $3\n\t"
-            "move  %0, $t0\n\t"
-            : "=r"(entry_hi_test)
-        );
-    
-    kernel_printf("tlb_refill: entry_lo1 = %x \n",entry_lo1_test);
-	#endif
+		unsigned int context_cp0;
+		asm volatile(  
+			"mfc0 %0, $4\n\t" //context, page table entry
+			"nop\n\t" //CP0 hazard
+			"mtc0 %1, $10\n\t" //context, page table entry                                            
+		    "nop\n\t" //CP0 hazard                                                                       
+			:"=r"(context_cp0)                                   
+		    :"r"(entry_hi));
+		asm volatile(  
+			"mfc0 %0, $4\n\t" 
+			"nop\n\t" //CP0 hazard
+			"mtc0 %1, $2\n\t" //context, page table entry                                            
+		    "nop\n\t" //CP0 hazard                                                                       
+			:"=r"(context_cp0)                                   
+		    :"r"(entry_lo0));
+		asm volatile(  
+			"mfc0 %0, $4\n\t"
+			"nop\n\t" //CP0 hazard
+			"mtc0 %1, $3\n\t" //context, page table entry                                            
+		    "nop\n\t" //CP0 hazard                                                                       
+			:"=r"(context_cp0)                                   
+		    :"r"(entry_lo1));
+		asm volatile(  
+			"mfc0 %0, $4\n\t" 
+			"nop\n\t" //CP0 hazard
+			"mtc0 %1, $5\n\t" //context, page table entry                                            
+		    "nop\n\t" //CP0 hazard                                                                       
+			:"=r"(context_cp0)                                   
+		    :"r"(pagemask));
+		asm volatile(  
+			"tlbwr\n\t"
+		    "nop\n\t"
+			"nop\n\t"
+		);
 		// when finish change exl = 0
 		exl = 0;
 		return ;
