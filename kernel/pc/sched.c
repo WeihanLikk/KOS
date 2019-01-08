@@ -357,7 +357,7 @@ static void init_task( struct task_struct *p )
 
 	void( *entry ) = (void *)asdasd;
 	unsigned int init_gp;
-	p->context.epc = (unsigned int)entry;
+	p->context.epc = (unsigned int)0;
 	//p->context.gp = (unsigned int)p;
 	asm volatile( "la %0, _gp\n\t"
 				  : "=r"( init_gp ) );
@@ -581,12 +581,15 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	p->context.a0 = argc;
 	p->context.a1 = (unsigned int)args;
 
-	//
-	attach_pid( p, newpid );
+	kernel_printf( "here down 1\n" );
 
+	attach_pid( p, p->pid );
+
+	kernel_printf( "here down 2\n" );
 	//kernel_printf( "third down\n" );
 	wake_up_new_task( p );
 
+	kernel_printf( "new task: %x\n", p->pid );
 	//kernel_printf( "forth down\n" );
 	return 1;
 }
@@ -632,6 +635,7 @@ static int execproc( unsigned int argc, void *args )
 int test_vm( unsigned int argc, void *args )
 {
 	kernel_printf( "I am here\n" );
+	//do_exit();
 }
 
 int execk( unsigned int argc, void *args, int is_wait )
