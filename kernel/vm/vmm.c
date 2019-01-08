@@ -108,8 +108,7 @@ static void exit_mmap( struct mm_struct *mm )
 	}
 }
 
-static void pgd_delete( pgd_t *pgd )
-{
+static void pgd_delete( pgd_t* pgd ){
 	int i;
 	pte_t *pte;
 	unsigned int ptec;  //page table entry
