@@ -57,7 +57,7 @@ static unsigned long calc_delta_mine( unsigned long delta_exec, struct load_weig
 	else
 		temp = SRR( temp * lw->inv_weight, WMULT_SHIFT );
 
-	kernel_printf( "check the temp: %x\n", temp );
+	//kernel_printf( "check the temp: %x\n", temp );
 
 	return (unsigned long)min( temp, (unsigned long)LONG_MAX );
 }
@@ -102,7 +102,7 @@ static void update_curr( struct cfs_rq *cfs_rq )
 	if ( unlikely( curr->load.weight != NICE_0_LOAD ) )
 		delta_exec = calc_delta_mine( delta_exec, &curr->load );
 	curr->vruntime += delta_exec;
-	//kernel_printf( "" );
+	//kernel_printf( "check the vruntime: %x of task: %x \n", curr->vruntime, cfs_rq->current_task->pid );
 
 	//kernel_printf( "3here ??\n" );
 

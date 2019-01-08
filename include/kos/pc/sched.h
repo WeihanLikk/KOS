@@ -264,7 +264,7 @@ struct task_struct *pick_next_task_fair( struct cfs_rq *cfs_rq );
 void sys_prioiry( int increment );
 extern void switch_ex( struct reg_context *regs );
 extern void switch_wa( struct reg_context *des, struct reg_context *src );
-int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *retpid, int is_vm );
+int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, int is_vm );
 int execk( unsigned int argc, void *args, int is_wait );
 void do_exit();
 int pc_kill( pid_t pid );

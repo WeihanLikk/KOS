@@ -238,6 +238,11 @@ void parse_cmd()
 		get_time( buf, sizeof( buf ) );
 		kernel_printf( "%s\n", buf );
 	}
+	else if ( kernel_strcmp( ps_buffer, "execk" ) == 0 )
+	{
+		result = execk( 1, (void *)param, 0 );
+		kernel_printf( ps_buffer, "execk return with %d\n", result );
+	}
 	// else if ( kernel_strcmp( ps_buffer, "sdwi" ) == 0 )
 	// {
 	// 	for ( i = 0; i < 512; i++ )
