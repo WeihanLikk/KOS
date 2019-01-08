@@ -102,6 +102,7 @@ static void update_curr( struct cfs_rq *cfs_rq )
 	if ( unlikely( curr->load.weight != NICE_0_LOAD ) )
 		delta_exec = calc_delta_mine( delta_exec, &curr->load );
 	curr->vruntime += delta_exec;
+	//kernel_printf( "" );
 
 	//kernel_printf( "3here ??\n" );
 
@@ -171,6 +172,7 @@ static void __enqueue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )
 
 	while ( *link )
 	{
+		//kernel_printf( "I am in link\n" );
 		parent = *link;
 		temp_entry = rb_entry( parent, struct sched_entity, run_node );
 		if ( key < entity_key( cfs_rq, temp_entry ) )
@@ -179,12 +181,14 @@ static void __enqueue_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )
 		}
 		else
 		{
+			//kernel_printf( "I am in else\n" );
 			link = &parent->rb_right;
 			leftmost = 0;
 		}
 
 		if ( leftmost )
 		{
+			//kernel_printf( "I am in leftmose\n" );
 			cfs_rq->rb_leftmost = &se->run_node;
 		}
 	}
