@@ -210,6 +210,7 @@ int asdasd()
 {
 	int countxx = 0;
 	kernel_printf( "asdasdasd !!!!!!!!!\n" );
+
 	for ( int i = 0; i < 10000000; i++ )
 	{
 		countxx++;
@@ -351,7 +352,7 @@ static void init_task( struct task_struct *p )
 
 	void( *entry ) = (void *)asdasd;
 	unsigned int init_gp;
-	p->context.epc = (unsigned int)entry;
+	p->context.epc = (unsigned int)0;
 	p->context.gp = (unsigned int)p;
 	asm volatile( "la %0, _gp\n\t"
 				  : "=r"( init_gp ) );
@@ -441,27 +442,19 @@ static void scheduler( struct reg_context *pt_context )
 
 		put_prev_task_fair( cfs_rq, prev );
 		next = pick_next_task( cfs_rq, prev );
-		if ( countx++ == 0 )
-		{
-			copy_context( &( next->context ), pt_context );
-		}
-		//copy_context( &( cfs_rq->current_task->context ), pt_context );
+
 		//kernel_printf( "check the next pid %x\n", next->pid );
-		// if ( likely( prev != next ) )
-		// {
-		// 	//kernel_printf( "we are not the same\n" );
-		// 	copy_context( pt_context, &( cfs_rq->current_task->context ) );
+		if ( likely( prev != next ) )
+		{
+			//kernel_printf( "we are not the same\n" );
+			copy_context( pt_context, &( cfs_rq->current_task->context ) );
 
-		// 	cfs_rq->current_task = next;
-		// 	//cfs_rq->curr = &next->se;
+			cfs_rq->current_task = next;
+			//cfs_rq->curr = &next->se;
 
-		// 	copy_context( &( cfs_rq->current_task->context ), pt_context );
-		// 	//context_switch!!
-		// }
-		// else
-		// {
-		// 	copy_context( &( cfs_rq->current_task->context ), pt_context );
-		// }
+			copy_context( &( cfs_rq->current_task->context ), pt_context );
+			//context_switch!!
+		}
 		//kernel_printf( "Can be here\n" );
 	} while ( need_resched() );
 	//kernel_printf( "Kankan here\n" );
@@ -473,23 +466,18 @@ void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context
 {
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *curr = cfs_rq->current_task;
-	update_cfs_clock( cfs_rq );
+	//update_cfs_clock( cfs_rq );
 	//time update
 
-	task_tick_fair( cfs_rq, curr );
-	// struct task_struct *prev, *next;
-	// prev = cfs_rq->current_task;
-	// put_prev_task_fair( cfs_rq, prev );
-	// next = pick_next_task( cfs_rq, prev );
-	// if ( countx++ == 0 )
-	// {
-	// 	copy_context( &( next->context ), pt_context );
-	// }
+	if ( countx++ == 0 )
+	{
+		copy_context( &( cfs_rq->current_task->context ), pt_context );
+	}
 	// kernel_printf( "kankan epc: %x", pt_context->epc );
 
 	//task_tick_fair( cfs_rq, curr );
 
-	scheduler( pt_context );
+	//scheduler( pt_context );
 	//struct task_struct *prev, *next;
 	//prev = cfs_rq->current_task;
 	//put_prev_task_fair( cfs_rq, prev );
