@@ -83,28 +83,13 @@ void free_pidmap( int pid )
 
 void pidhash_initial()
 {
-	//int pidhash_size = 1;
 	int pidhash_size = 1 << 5;  //32
-	//int pidhash_size = 1 << pidhash_shift;  //2048
-	// unsigned char *p = alloc_bootmem( pidhash_size * sizeof( *( pid_hash ) ) );
-	// pid_hash = (struct hlist_head *)( (unsigned int)p | 0x80000000 );
 
-	//kernel_printf( "why cannot pass this?\n" );
-	// kernel_printf( "%x\n", pid_hash );
-
-	// *p = 0x12;
-	// kernel_printf( "content: %x", *p );
 	if ( !pid_hash )
 		kernel_printf( "Could not alloc pidhash!\n" );
 
-	// for ( int i = 0; i < pidhash_size; i++ )
-	// {
-	// 	kernel_printf( "%x: %x\n", i, pid_hash[ i ] );
-	// }
 	for ( int i = 0; i < pidhash_size; i++ )
 		INIT_HLIST_HEAD( &pid_hash[ i ] );
-
-	//kernel_printf( "Let's try again, why cannot pass this?\n" );
 }
 
 struct pid *find_pid( int nr )
@@ -112,12 +97,16 @@ struct pid *find_pid( int nr )
 	struct hlist_node *elem;
 	struct pid *pid;
 
-	kernel_printf( "Maybe here\n" );
-	hlist_for_each_entry( pid, elem, &pid_hash[ pid_hashfn( nr ) ], pid_chain )
+	// kernel_printf( "Maybe here\n" );
+	// kernel_printf( "nr: %x\n", nr );
+	hlist_for_each_entry( pid, elem, &pid_hash[ nr ], pid_chain )
 	{
-		kernel_printf( "Maybe 12312\n" );
+		//kernel_printf( "Maybe 12312\n" );
 		if ( pid->nr == nr )
+		{
+			//kernel_printf( "in hist\n" );
 			return pid;
+		}
 	}
 	return NULL;
 }
@@ -139,14 +128,14 @@ void attach_pid( struct task_struct *task, int nr )
 	task_pid = &( task->pids );
 
 	pid = find_pid( nr );
-	kernel_printf( " i am here 0\n" );
-	kernel_printf( "check the hash: %x\n", pid_hashfn( nr ) );
+	// kernel_printf( " i am here 0\n" );
+	// kernel_printf( "check the hash: %x\n", nr );
 	if ( pid == NULL )
 	{
-		hlist_add_head( &( task_pid->pid_chain ), &pid_hash[ pid_hashfn( nr ) ] );
-		kernel_printf( " i am here 1\n" );
+		hlist_add_head( &( task_pid->pid_chain ), &pid_hash[ nr ] );
+		//kernel_printf( " i am here 1\n" );
 		INIT_LIST_HEAD( &task_pid->pid_list );
-		kernel_printf( " i am here 2\n" );
+		//kernel_printf( " i am here 2\n" );
 	}
 	else
 	{
@@ -173,7 +162,7 @@ void detach_pid( struct task_struct *task )
 			pid_next = list_entry( pid->pid_list.next,
 								   struct pid, pid_list );
 			hlist_add_head( &pid_next->pid_chain,
-							&pid_hash[ pid_hashfn( pid_next->nr ) ] );
+							&pid_hash[ pid_next->nr ] );
 		}
 	}
 	if ( !nr )

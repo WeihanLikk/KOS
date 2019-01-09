@@ -241,7 +241,16 @@ void parse_cmd()
 	else if ( kernel_strcmp( ps_buffer, "execk" ) == 0 )
 	{
 		result = execk( 1, (void *)param, 0 );
-		kernel_printf( ps_buffer, "execk return with %d\n", result );
+		//kernel_printf( ps_buffer, "execk return with %d\n", result );
+	}
+	else if ( kernel_strcmp( ps_buffer, "kill" ) == 0 )
+	{
+		int pid = param[ 0 ] - '0';
+		result = pc_kill( pid );
+	}
+	else if ( kernel_strcmp( ps_buffer, "wait" ) == 0 )
+	{
+		result = execk( 1, (void *)param, 1 );
 	}
 	// else if ( kernel_strcmp( ps_buffer, "sdwi" ) == 0 )
 	// {

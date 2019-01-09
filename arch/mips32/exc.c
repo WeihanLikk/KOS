@@ -383,6 +383,8 @@ void do_exceptions( unsigned int status, unsigned int cause, context *pt_context
 	unsigned int count;
 #endif
 
+	//return;
+
 	if ( exceptions[ index ] )
 	{
 		exceptions[ index ]( status, cause, pt_context );

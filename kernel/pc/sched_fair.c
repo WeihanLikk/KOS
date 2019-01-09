@@ -102,7 +102,6 @@ static void update_curr( struct cfs_rq *cfs_rq )
 	if ( unlikely( curr->load.weight != NICE_0_LOAD ) )
 		delta_exec = calc_delta_mine( delta_exec, &curr->load );
 	curr->vruntime += delta_exec;
-	//kernel_printf( "check the vruntime: %x of task: %x \n", curr->vruntime, cfs_rq->current_task->pid );
 
 	//kernel_printf( "3here ??\n" );
 
@@ -258,6 +257,7 @@ void enqueue_task_fair( struct cfs_rq *cfs_rq, struct task_struct *p, int wakeup
 static inline void resched_task( struct task_struct *p )
 {
 	p->THREAD_FLAG = TIF_NEED_RESCHED;
+	kernel_printf( "set the flag to task: %x\n", p->pid );
 	//task_thread_info( p )->flag = TIF_NEED_RESCHED;
 }
 
@@ -373,6 +373,7 @@ void task_new_fair( struct cfs_rq *cfs_rq, struct task_struct *p )
 	{
 		swap( curr->vruntime, se->vruntime );
 	}
+	kernel_printf( "check the vruntime of son %x, and of the current: %x \n", se->vruntime, curr->vruntime );
 	enqueue_task_fair( cfs_rq, p, 0 );
 	resched_task( cfs_rq->current_task );
 
