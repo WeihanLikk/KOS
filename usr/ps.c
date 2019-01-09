@@ -252,6 +252,48 @@ void parse_cmd()
 	{
 		result = execk( 1, (void *)param, 1 );
 	}
+	else if ( kernel_strcmp( ps_buffer, "ps" ) == 0 )
+	{
+		print_info();
+	}
+	else if ( kernel_strcmp( ps_buffer, "nice" ) == 0 )
+	{
+		if ( param[ 0 ] != ' ' )
+		{
+			int increase;
+			if ( param[ 0 ] == '-' )
+			{
+				int a = param[ 1 ] - '0';
+				int b = param[ 2 ] - '0';
+				increase = ( 10 * a + b ) * -1;
+			}
+			else
+			{
+				int a = param[ 0 ] - '0';
+				int b = param[ 1 ] - '0';
+				increase = 10 * a + b;
+			}
+
+			sys_prioiry( increase );
+		}
+		else
+		{
+			kernel_printf( "Error in format, the first argument is a blank\n" );
+		}
+		//sys_prioiry( increase );
+	}
+	else if ( kernel_strcmp( ps_buffer, "priomax" ) == 0 )
+	{
+		if ( param[ 0 ] != ' ' )
+		{
+			int pid = param[ 0 ] - '0';
+			sys_prioiry_pid( -40, pid );
+		}
+		else
+		{
+			kernel_printf( "Error in format, the first argument is a blank\n" );
+		}
+	}
 	// else if ( kernel_strcmp( ps_buffer, "sdwi" ) == 0 )
 	// {
 	// 	for ( i = 0; i < 512; i++ )

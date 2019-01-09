@@ -85,6 +85,27 @@ static int need_resched()
 	}
 }
 
+static void add_wait( struct task_struct *task )
+{
+	list_add_tail( &( task->node ), &wait );
+}
+
+static void add_exited( struct task_struct *task )
+{
+	list_add_tail( &( task->node ), &exited );
+}
+
+static void add_task( struct task_struct *task )
+{
+	list_add_tail( &( task->node ), &tasks );
+}
+
+static void remove( struct task_struct *task )
+{
+	list_del( &( task->node ) );
+	INIT_LIST_HEAD( &( task->node ) );
+}
+
 static void clear_tsk_need_resched( struct task_struct *p )
 {
 	p->THREAD_FLAG = 0;
@@ -195,20 +216,6 @@ static void wake_up_new_task( struct task_struct *p )
 	}
 }
 
-// void init_idle( struct task_struct *idle )
-// {
-// 	//
-// 	struct cfs_rq *cfs_rq = &my_cfs_rq;
-// 	cfs_rq->idle = idle;
-// 	cfs_rq->idle->pid = alloc_pidmap();
-// 	if ( cfs_rq->idle->pid != 0 )
-// 	{
-// 		//log( LOG_OK, "Here ka zhu le." );
-// 		kernel_printf( "idle pid error\n" );
-// 		kernel_printf( "The idle pid: %d\n", cfs_rq->idle->pid );
-// 	}
-// }
-
 int testtest()
 {
 	int countxx = 0;
@@ -221,20 +228,6 @@ int testtest()
 			kernel_printf( "testtest can do it\n" );
 		}
 	}
-}
-
-int asdasd()
-{
-	//int countxx = 0;
-	kernel_printf( "asdasdasd !!!!!!!!!\n" );
-	// for ( int i = 0; i < 10000000; i++ )
-	// {
-	// 	countxx++;
-	// 	if ( countxx % 100000 == 0 )
-	// 	{
-	// 		kernel_printf( "testtest can do it\n" );
-	// 	}
-	// }
 }
 
 static void create_shell_process( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, pid_t *returnpid, int is_vm )
@@ -299,6 +292,7 @@ static void create_shell_process( char *name, void ( *entry )( unsigned int argc
 
 	my_cfs_rq.current_task = &new->task;
 	my_cfs_rq.curr = &new->task.se;
+	add_task( &new->task );
 	wake_up_new_task( &new->task );
 	//kernel_printf( "kernel shell created\n" );
 }
@@ -347,6 +341,7 @@ void sched_init()
 
 	INIT_LIST_HEAD( &exited );
 	INIT_LIST_HEAD( &wait );
+	INIT_LIST_HEAD( &tasks );
 
 	create_shell_process( "shell", (void *)ps, 0, 0, 0, 0 );
 
@@ -532,8 +527,7 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	// kernel_printf( "check the epc in create: %x asd\n", new->task.context.epc );
 	// kernel_printf( "check the execstart in create: %x asd\n", new->task.se.exec_start );
 
-	// my_cfs_rq.current_task = &new->task;
-	// my_cfs_rq.curr = &new->task.se;
+	add_task( &new->task );
 	wake_up_new_task( &new->task );
 
 	kernel_printf( "task: %x create\n", new->task.pid );
@@ -594,27 +588,6 @@ out_running:
 	return success;
 }
 
-static void add_wait( struct task_struct *task )
-{
-	list_add_tail( &( task->node ), &wait );
-}
-
-static void add_exited( struct task_struct *task )
-{
-	list_add_tail( &( task->node ), &exited );
-}
-
-static void add_task( struct task_struct *task )
-{
-	list_add_tail( &( task->node ), &tasks );
-}
-
-static void remove_wait( struct task_struct *p )
-{
-	list_del( &( p->node ) );
-	INIT_LIST_HEAD( &( p->node ) );
-}
-
 void do_exit()
 {
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
@@ -654,6 +627,7 @@ void do_exit()
 
 	detach_pid( current );
 
+	remove( current );
 	add_exited( current );
 
 	update_cfs_clock( cfs_rq );
@@ -703,9 +677,12 @@ int pc_kill( pid_t pid )
 	{
 		kernel_printf( "Error in kill, why this process is not on cfs_rq?\n" );
 	}
-	add_exited( p );
+	remove( p );
+	//add_exited( p );
 	free_pidmap( pid );
 	detach_pid( p );
+	//my_cfs_rq.nr_running--;
+	kfree( p );
 
 	enable_interrupts();
 
@@ -740,7 +717,7 @@ void waitpid( pid_t pid )
 	{
 		dequeu_task_fair( cfs_rq, current, 0 );
 	}
-	add_wait( current );
+	//add_wait( current );
 
 	update_cfs_clock( cfs_rq );
 	struct task_struct *next = pick_next_task( cfs_rq, current );
@@ -757,11 +734,41 @@ void waitpid( pid_t pid )
 	}
 }
 
+void print_info()
+{
+	struct task_struct *next;
+	struct list_head *pos;
+	kernel_printf( "========CFS_RQ INFO=========\n" );
+	kernel_printf( "Current task pid: %x\n", my_cfs_rq.current_task->pid );
+	kernel_printf( "Current Systime time(10^-6): %x\n", my_cfs_rq.clock );
+	kernel_printf( "Check the minumam vruntime: %x\n", my_cfs_rq.min_vruntime );
+	kernel_printf( "Check the load weight in cfs_rq: %x\n", my_cfs_rq.load.weight );
+	kernel_printf( "Check the number in rbtree: %d\n", my_cfs_rq.nr_running );
+	kernel_printf( "========CFS_RQ INFO=========\n" );
+	kernel_printf( "\n" );
+	kernel_printf( "========TASK INFO=========\n" );
+	list_for_each( pos, &tasks )
+	{
+		next = container_of( pos, struct task_struct, node );
+		kernel_printf( "name:%s \t pid:%d \t  prio:%d \t\n", next->name, next->pid, next->prioiry );
+	}
+	kernel_printf( "========TASK INFO=========\n" );
+	kernel_printf( "\n" );
+	kernel_printf( "========SCHED INFO=========\n" );
+	list_for_each( pos, &tasks )
+	{
+		next = container_of( pos, struct task_struct, node );
+		kernel_printf( "vruntime:%x \t load weight:%x \t\n", next->se.vruntime, next->se.load.weight );
+	}
+	kernel_printf( "========SCHED INFO=========\n" );
+}
+
 static void set_priority( struct task_struct *p, long prioiry )
 {
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	update_cfs_clock( cfs_rq );
 
+	disable_interrupts();
 	int on_rq = p->se.on_rq;
 	if ( on_rq )
 	{
@@ -784,6 +791,7 @@ static void set_priority( struct task_struct *p, long prioiry )
 			cfs_rq->current_task->THREAD_FLAG = TIF_NEED_RESCHED;
 		}
 	}
+	enable_interrupts();
 }
 
 void sys_prioiry( int increment )
@@ -807,4 +815,33 @@ void sys_prioiry( int increment )
 	}
 
 	set_priority( current, prioiry );
+}
+
+void sys_prioiry_pid( int increment, int pid )
+{
+	long prioiry;
+	//struct cfs_rq *cfs_rq = &my_cfs_rq;
+	//struct task_struct *current = cfs_rq->current_task;
+	struct task_struct *p = find_task_by_pid( pid );
+	if ( p == NULL )
+	{
+		kernel_printf( "pid %d doesn't not exists\n", pid );
+		return;
+	}
+	if ( increment < -40 )
+		increment = -40;
+	if ( increment > 40 )
+		increment = 40;
+
+	prioiry = p->prioiry + increment;
+	if ( prioiry < 100 )
+	{
+		prioiry = 100;
+	}
+	if ( prioiry > 140 )
+	{
+		prioiry = 140;
+	}
+
+	set_priority( p, prioiry );
 }

@@ -262,6 +262,7 @@ void dequeu_task_fair( struct cfs_rq *cfs_rq, struct task_struct *p, int sleep )
 void put_prev_task_fair( struct cfs_rq *cfs_rq, struct task_struct *prev );
 struct task_struct *pick_next_task_fair( struct cfs_rq *cfs_rq );
 void sys_prioiry( int increment );
+void sys_prioiry_pid( int increment, int pid );
 extern void switch_ex( struct reg_context *regs );
 extern void switch_wa( struct reg_context *des, struct reg_context *src );
 int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, int is_vm );
@@ -270,6 +271,6 @@ void do_exit();
 int pc_kill( pid_t pid );
 void waitpid( pid_t pid );
 void sched_init();
-
+void print_info();
 int xxx;
 #endif
