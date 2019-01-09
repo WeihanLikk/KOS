@@ -257,7 +257,7 @@ void enqueue_task_fair( struct cfs_rq *cfs_rq, struct task_struct *p, int wakeup
 static inline void resched_task( struct task_struct *p )
 {
 	p->THREAD_FLAG = TIF_NEED_RESCHED;
-	kernel_printf( "set the flag to task: %x\n", p->pid );
+	//kernel_printf( "set the flag to task: %x\n", p->pid );
 	//task_thread_info( p )->flag = TIF_NEED_RESCHED;
 }
 
@@ -285,6 +285,10 @@ static void check_preempt_tick( struct cfs_rq *cfs_rq, struct sched_entity *curr
 	delta_exec = curr->sum_exec_runtime - curr->prev_sum_exec_runtime;
 	if ( delta_exec > ideal_runtime )
 		resched_task( cfs_rq->current_task );
+	if ( cfs_rq->current_task->THREAD_FLAG == TIF_NEED_RESCHED )
+	{
+		kernel_printf( "set the resched flag to current task in ticks check\n" );
+	}
 }
 
 static void entity_tick( struct cfs_rq *cfs_rq, struct sched_entity *curr )
@@ -325,7 +329,6 @@ static void set_next_entity( struct cfs_rq *cfs_rq, struct sched_entity *se )
 static struct sched_entity *pick_next_entity( struct cfs_rq *cfs_rq )
 {
 	struct sched_entity *se = NULL;
-	//kernel_printf( "the name: %s", cfs_rq->current_task->name );
 	if ( first_fair( cfs_rq ) )
 	{
 		se = __pick_next_entity( cfs_rq );
@@ -373,7 +376,7 @@ void task_new_fair( struct cfs_rq *cfs_rq, struct task_struct *p )
 	{
 		swap( curr->vruntime, se->vruntime );
 	}
-	kernel_printf( "check the vruntime of son %x, and of the current: %x \n", se->vruntime, curr->vruntime );
+	kernel_printf( "check the vruntime of new %x, and of the current: %x \n", se->vruntime, curr->vruntime );
 	enqueue_task_fair( cfs_rq, p, 0 );
 	resched_task( cfs_rq->current_task );
 

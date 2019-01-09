@@ -189,6 +189,10 @@ static void wake_up_new_task( struct task_struct *p )
 	cfs_rq->load.weight += p->se.load.weight;
 
 	check_preempt_wakeup( cfs_rq, p );
+	if ( cfs_rq->current_task->THREAD_FLAG == TIF_NEED_RESCHED )
+	{
+		kernel_printf( "set the resched flag to current task in wake up\n" );
+	}
 }
 
 // void init_idle( struct task_struct *idle )
@@ -251,7 +255,7 @@ static void create_shell_process( char *name, void ( *entry )( unsigned int argc
 
 	new = (union thread_union *)kmalloc( sizeof( union thread_union ) );
 
-	kernel_printf( "Down here1\n" );
+	//kernel_printf( "Down here1\n" );
 
 	if ( new == 0 )
 	{
@@ -263,7 +267,7 @@ static void create_shell_process( char *name, void ( *entry )( unsigned int argc
 	new->task.ASID = newpid;
 	new->task.parent = cfs_rq->idle->pid;
 	new->task.policy = SCHED_NORMAL;
-	new->task.prioiry = 130;
+	new->task.prioiry = NICE_TO_PRIO( 10 );
 	new->task.THREAD_FLAG = 0;
 
 	//kernel_memset( &( new->task.se ), 0, sizeof( struct sched_entity ) );
@@ -296,7 +300,7 @@ static void create_shell_process( char *name, void ( *entry )( unsigned int argc
 	my_cfs_rq.current_task = &new->task;
 	my_cfs_rq.curr = &new->task.se;
 	wake_up_new_task( &new->task );
-	kernel_printf( "kernel shell created\n" );
+	//kernel_printf( "kernel shell created\n" );
 }
 
 static void init_task( struct task_struct *p )
@@ -497,7 +501,7 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	new->task.ASID = newpid;
 	new->task.parent = cfs_rq->current_task->pid;
 	new->task.policy = SCHED_NORMAL;
-	new->task.prioiry = 130;
+	new->task.prioiry = NICE_TO_PRIO( 10 );
 	new->task.THREAD_FLAG = 0;
 
 	//kernel_memset( &( new->task.se ), 0, sizeof( struct sched_entity ) );
