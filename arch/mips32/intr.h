@@ -1,7 +1,7 @@
 #ifndef _INTR_H
 #define _INTR_H
 
-#include <kos/pc/sched.h>
+#include <zjunix/pc/sched.h>
 
 typedef void ( *intr_fn )( unsigned int, unsigned int, context *context );
 

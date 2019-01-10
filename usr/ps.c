@@ -1,14 +1,14 @@
-#include <kos/ps.h>
+#include "ps.h"
 #include <driver/ps2.h>
 #include <driver/sd.h>
 #include <driver/vga.h>
-#include <kos/bootmm.h>
-#include <kos/buddy.h>
-// #include <zjunix/fs/fat.h>
-// #include <zjunix/vfs/vfs.h>
-#include <kos/slab.h>
-#include <kos/time.h>
-#include <kos/utils.h>
+#include <zjunix/bootmm.h>
+#include <zjunix/buddy.h>
+#include <zjunix/fs/fat.h>
+#include <zjunix/vfs/vfs.h>
+#include <zjunix/slab.h>
+#include <zjunix/time.h>
+#include <zjunix/utils.h>
 #include <driver/vga.h>
 #include "../usr/ls.h"
 #include "exec.h"
@@ -140,8 +140,7 @@ int sync_demo_create()
 
 void ps()
 {
-	//kernel_printf( "Press any key to enter shell.\n" );
-	kernel_printf( "mashaka I am here\n" );
+	kernel_printf( "Press any key to enter shell.\n" );
 	kernel_getchar();
 	char c;
 	ps_buffer_index = 0;
@@ -151,7 +150,7 @@ void ps()
 	// kernel_puts("PowerShell\n", VGA_WHITE, VGA_BLACK);
 	kernel_puts( "PS", VGA_GREEN, VGA_BLACK );
 	kernel_puts( ":", VGA_WHITE, VGA_BLACK );
-	//kernel_puts( pwd_dentry->d_name.name, VGA_YELLOW, VGA_BLACK );
+	kernel_puts( pwd_dentry->d_name.name, VGA_YELLOW, VGA_BLACK );
 	kernel_puts( ">", VGA_WHITE, VGA_BLACK );
 	while ( 1 )
 	{
@@ -172,7 +171,7 @@ void ps()
 			// kernel_puts("PowerShell\n", VGA_WHITE, VGA_BLACK);
 			kernel_puts( "PS", VGA_GREEN, VGA_BLACK );
 			kernel_puts( ":", VGA_WHITE, VGA_BLACK );
-			//kernel_puts( pwd_dentry->d_name.name, VGA_YELLOW, VGA_BLACK );
+			kernel_puts( pwd_dentry->d_name.name, VGA_YELLOW, VGA_BLACK );
 			kernel_puts( ">", VGA_WHITE, VGA_BLACK );
 		}
 		else if ( c == 0x08 )
@@ -238,10 +237,127 @@ void parse_cmd()
 		get_time( buf, sizeof( buf ) );
 		kernel_printf( "%s\n", buf );
 	}
-	else if ( kernel_strcmp( ps_buffer, "execk" ) == 0 )
+	else if ( kernel_strcmp( ps_buffer, "sdwi" ) == 0 )
+	{
+		for ( i = 0; i < 512; i++ )
+			sd_buffer[ i ] = i;
+		sd_write_block( sd_buffer, 23128, 1 );
+		kernel_puts( "sdwi\n", 0xfff, 0 );
+	}
+	else if ( kernel_strcmp( ps_buffer, "sdr" ) == 0 )
+	{
+		for ( i = 0; i < 512; i++ )
+			sd_buffer[ i ] = 0;
+
+		i = sd_read_block( sd_buffer, 23128, 1 );
+
+		kernel_printf( "read_result: %d\n", i );
+		for ( i = 0; i < 512; i++ )
+		{
+			kernel_printf( "%d ", sd_buffer[ i ] );
+		}
+		kernel_putchar( '\n', 0xfff, 0 );
+	}
+	else if ( kernel_strcmp( ps_buffer, "sdwz" ) == 0 )
+	{
+		for ( i = 0; i < 512; i++ )
+		{
+			sd_buffer[ i ] = 0;
+		}
+		sd_write_block( sd_buffer, 23128, 1 );
+		kernel_puts( "sdwz\n", 0xfff, 0 );
+	}
+	//     } else if (kernel_strcmp(ps_buffer, "mminfo") == 0) {
+	//         bootmap_info("bootmm");
+	//         buddy_info();
+	//     } else if (kernel_strcmp(ps_buffer, "mmtest") == 0) {
+	//         kernel_printf("kmalloc : %x, size = 1KB\n", kmalloc(1024));
+	//     } else if (kernel_strcmp(ps_buffer, "ps") == 0) {
+	//     //    result = print_proc();
+	//         result = 0;
+	//         disable_interrupts();
+	//   //      print_task();
+	//         print_sched();
+	//         // print_exited();
+	//         // print_wait();
+	//         enable_interrupts();
+	//         kernel_printf("ps return with %d\n", result);
+	//     } else if (kernel_strcmp(ps_buffer, "kill") == 0) {
+	//         int pid = param[0] - '0';
+	//         kernel_printf("Killing process %d\n", pid);
+	//         result = pc_kill(pid);
+	//         kernel_printf("kill return with %d\n", result);
+	//     } else if (kernel_strcmp(ps_buffer, "time") == 0) {
+	//         unsigned int init_gp;
+	//         asm volatile("la %0, _gp\n\t" : "=r"(init_gp));
+	// //       pc_create(2, system_time_proc, (unsigned int)kmalloc(4096), init_gp, "time");
+	//     }
+	//     // else if (kernel_strcmp(ps_buffer, "proc") == 0) {
+	//     //     result = proc_demo_create();
+	//     //     kernel_printf("proc return with %d\n", result);
+	//     // }
+	//     else if (kernel_strcmp(ps_buffer, "vi") == 0) {
+	//         result = myvi(param);
+	//         kernel_printf("vi return with %d\n", result);
+	//     }
+	//     else if (kernel_strcmp(ps_buffer, "mt") == 0) {
+	//         testMem();
+	//         kernel_printf("Memory test return with 0\n");
+	//     }
+	//     else if (kernel_strcmp(ps_buffer, "mt2") == 0) {
+	//         testMem2();
+	//         kernel_printf("Memory test2 return with 0\n");
+	//     }
+
+	//     else if (kernel_strcmp(ps_buffer, "execk") == 0) {
+	//         //debug
+	//         kernel_printf("Enter execk\n");
+	//         //debug
+	//         result = exec_from_kernel(1, (void*)param, 0, 0);
+	//         kernel_printf("execk return with %d\n", result);
+	//     } else if (kernel_strcmp(ps_buffer, "execk2") == 0) {
+	//         result = exec_from_kernel(1, (void*)param, 1, 0);
+	//         kernel_printf(ps_buffer, "execk2 return with %d\n");
+	//     } else if (kernel_strcmp(ps_buffer, "vm") == 0) {
+	//         struct mm_struct* mm = mm_create();
+	//         kernel_printf("Create succeed. %x\n", mm);
+	//         mm_delete(mm);
+	//     } else if (kernel_strcmp(ps_buffer, "execk3") == 0) {
+	//         result = exec_from_kernel(1, (void*)param, 0, 1);
+	//         kernel_printf(ps_buffer, "execk3 return with %d\n",result);
+	//     } else if (kernel_strcmp(ps_buffer, "ey") == 0) {
+	//         result = exec_from_kernel(1, "/seg.bin", 0, 1);
+	//         kernel_printf(ps_buffer, "execk3 return with %d\n", result);
+	//     } else if (kernel_strcmp(ps_buffer, "es") == 0) {
+	//         result = exec_from_kernel(1, "/syscall.bin", 0, 1);
+	//         kernel_printf(ps_buffer, "execk3 return with %d\n", result);
+	//     } else if (kernel_strcmp(ps_buffer, "tlb") == 0) {
+	//         // result = tlb_test();
+	//         // kernel_printf(ps_buffer, "tlb_test return with %d\n", result);
+	//     } else if (kernel_strcmp(ps_buffer, "sync") == 0) {
+	//         result = sync_demo_create();
+	//         kernel_printf("proc return with %d\n", result);
+	//     }
+
+	else if ( kernel_strcmp( ps_buffer, "cat" ) == 0 )
+	{
+		result = vfs_cat( param );
+	}
+	else if ( kernel_strcmp( ps_buffer, "rm" ) == 0 )
+	{
+		result = vfs_rm( param );
+	}
+	else if ( kernel_strcmp( ps_buffer, "ls" ) == 0 )
+	{
+		result = vfs_ls( param );
+	}
+	else if ( kernel_strcmp( ps_buffer, "cd" ) == 0 )
+	{
+		result = vfs_cd( param );
+	}
+	else if ( kernel_strcmp( ps_buffer, "exec" ) == 0 )
 	{
 		result = execk( 1, (void *)param, 0 );
-		//kernel_printf( ps_buffer, "execk return with %d\n", result );
 	}
 	else if ( kernel_strcmp( ps_buffer, "kill" ) == 0 )
 	{
@@ -294,152 +410,6 @@ void parse_cmd()
 			kernel_printf( "Error in format, the first argument is a blank\n" );
 		}
 	}
-	// else if ( kernel_strcmp( ps_buffer, "sdwi" ) == 0 )
-	// {
-	// 	for ( i = 0; i < 512; i++ )
-	// 		sd_buffer[ i ] = i;
-	// 	sd_write_block( sd_buffer, 23128, 1 );
-	// 	kernel_puts( "sdwi\n", 0xfff, 0 );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "sdr" ) == 0 )
-	// {
-	// 	for ( i = 0; i < 512; i++ )
-	// 		sd_buffer[ i ] = 0;
-
-	// 	i = sd_read_block( sd_buffer, 23128, 1 );
-
-	// 	kernel_printf( "read_result: %d\n", i );
-	// 	for ( i = 0; i < 512; i++ )
-	// 	{
-	// 		kernel_printf( "%d ", sd_buffer[ i ] );
-	// 	}
-	// 	kernel_putchar( '\n', 0xfff, 0 );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "sdwz" ) == 0 )
-	// {
-	// 	for ( i = 0; i < 512; i++ )
-	// 	{
-	// 		sd_buffer[ i ] = 0;
-	// 	}
-	// 	sd_write_block( sd_buffer, 23128, 1 );
-	// 	kernel_puts( "sdwz\n", 0xfff, 0 );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "mminfo" ) == 0 )
-	// {
-	// 	bootmap_info( "bootmm" );
-	// 	buddy_info();
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "mmtest" ) == 0 )
-	// {
-	// 	kernel_printf( "kmalloc : %x, size = 1KB\n", kmalloc( 1024 ) );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "ps" ) == 0 )
-	// {
-	// 	//    result = print_proc();
-	// 	result = 0;
-	// 	disable_interrupts();
-	// 	//      print_task();
-	// 	print_sched();
-	// 	// print_exited();
-	// 	// print_wait();
-	// 	enable_interrupts();
-	// 	kernel_printf( "ps return with %d\n", result );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "kill" ) == 0 )
-	// {
-	// 	int pid = param[ 0 ] - '0';
-	// 	kernel_printf( "Killing process %d\n", pid );
-	// 	result = pc_kill( pid );
-	// 	kernel_printf( "kill return with %d\n", result );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "time" ) == 0 )
-	// {
-	// 	unsigned int init_gp;
-	// 	asm volatile( "la %0, _gp\n\t"
-	// 				  : "=r"( init_gp ) );
-	// 	//       pc_create(2, system_time_proc, (unsigned int)kmalloc(4096), init_gp, "time");
-	// }
-	// // else if (kernel_strcmp(ps_buffer, "proc") == 0) {
-	// //     result = proc_demo_create();
-	// //     kernel_printf("proc return with %d\n", result);
-	// // }
-	// else if ( kernel_strcmp( ps_buffer, "vi" ) == 0 )
-	// {
-	// 	result = myvi( param );
-	// 	kernel_printf( "vi return with %d\n", result );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "mt" ) == 0 )
-	// {
-	// 	testMem();
-	// 	kernel_printf( "Memory test return with 0\n" );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "mt2" ) == 0 )
-	// {
-	// 	testMem2();
-	// 	kernel_printf( "Memory test2 return with 0\n" );
-	// }
-
-	// else if ( kernel_strcmp( ps_buffer, "execk" ) == 0 )
-	// {
-	// 	//debug
-	// 	kernel_printf( "Enter execk\n" );
-	// 	//debug
-	// 	result = exec_from_kernel( 1, (void *)param, 0, 0 );
-	// 	kernel_printf( "execk return with %d\n", result );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "execk2" ) == 0 )
-	// {
-	// 	result = exec_from_kernel( 1, (void *)param, 1, 0 );
-	// 	kernel_printf( ps_buffer, "execk2 return with %d\n" );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "vm" ) == 0 )
-	// {
-	// 	struct mm_struct *mm = mm_create();
-	// 	kernel_printf( "Create succeed. %x\n", mm );
-	// 	mm_delete( mm );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "execk3" ) == 0 )
-	// {
-	// 	result = exec_from_kernel( 1, (void *)param, 0, 1 );
-	// 	kernel_printf( ps_buffer, "execk3 return with %d\n", result );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "ey" ) == 0 )
-	// {
-	// 	result = exec_from_kernel( 1, "/seg.bin", 0, 1 );
-	// 	kernel_printf( ps_buffer, "execk3 return with %d\n", result );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "es" ) == 0 )
-	// {
-	// 	result = exec_from_kernel( 1, "/syscall.bin", 0, 1 );
-	// 	kernel_printf( ps_buffer, "execk3 return with %d\n", result );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "tlb" ) == 0 )
-	// {
-	// 	// result = tlb_test();
-	// 	// kernel_printf(ps_buffer, "tlb_test return with %d\n", result);
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "sync" ) == 0 )
-	// {
-	// 	result = sync_demo_create();
-	// 	kernel_printf( "proc return with %d\n", result );
-	// }
-
-	// else if ( kernel_strcmp( ps_buffer, "cat" ) == 0 )
-	// {
-	// 	result = vfs_cat( param );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "rm" ) == 0 )
-	// {
-	// 	result = vfs_rm( param );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "ls" ) == 0 )
-	// {
-	// 	result = vfs_ls( param );
-	// }
-	// else if ( kernel_strcmp( ps_buffer, "cd" ) == 0 )
-	// {
-	// 	result = vfs_cd( param );
-	// }
 
 	else
 	{

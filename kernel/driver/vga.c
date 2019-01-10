@@ -1,6 +1,6 @@
 #include "vga.h"
 #include <arch.h>
-#include <kos/utils.h>
+#include <zjunix/utils.h>
 
 const int VGA_CHAR_MAX_ROW = 32;
 const int VGA_CHAR_MAX_COL = 128;

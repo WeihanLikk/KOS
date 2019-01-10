@@ -1,10 +1,10 @@
-#include <kos/pc/sched.h>
-#include <kos/vm/vmm.h>
+#include <zjunix/pc/sched.h>
+#include <zjunix/vm.h>
 #include <driver/vga.h>
 #include <intr.h>
-#include <kos/log.h>
-#include <kos/slab.h>
-#include <kos/ps.h>
+#include <zjunix/log.h>
+#include <zjunix/slab.h>
+#include <../../usr/ps.h>
 #include <arch.h>
 
 struct list_head wait;
@@ -19,7 +19,7 @@ unsigned long total = 0;
 
 struct task_struct *p;
 
-static void copy_context( struct reg_context *src, struct reg_context *dest )
+static void copy_context( struct regs_context *src, struct regs_context *dest )
 {
 	dest->epc = src->epc;
 	dest->at = src->at;
@@ -262,7 +262,7 @@ static void create_shell_process( char *name, void ( *entry )( unsigned int argc
 
 	kernel_strcpy( new->task.name, "shell" );
 
-	kernel_memset( &( new->task.context ), 0, sizeof( struct reg_context ) );
+	kernel_memset( &( new->task.context ), 0, sizeof( struct regs_context ) );
 
 	//kernel_printf( "Down here3\n" );
 
@@ -346,7 +346,7 @@ void sched_init()
 	//kernel_printf( "sched init complete\n" );
 }
 
-static void scheduler( struct reg_context *pt_context )
+static void scheduler( struct regs_context *pt_context )
 {
 	struct task_struct *prev, *next;
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
@@ -388,7 +388,7 @@ static void scheduler( struct reg_context *pt_context )
 	} while ( need_resched() );
 }
 
-void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context *pt_context )
+void scheduler_tick( unsigned int status, unsigned int cause, struct regs_context *pt_context )
 {
 	struct cfs_rq *cfs_rq = &my_cfs_rq;
 	struct task_struct *curr = cfs_rq->current_task;
@@ -397,6 +397,10 @@ void scheduler_tick( unsigned int status, unsigned int cause, struct reg_context
 	task_tick_fair( cfs_rq, curr );
 
 	scheduler( pt_context );
+	// if ( countx++ == 0 )
+	// {
+	// 	copy_context( &( cfs_rq->current_task->context ), pt_context );
+	// }
 
 	asm volatile( "mtc0 $zero, $9\n\t" );
 }
@@ -442,7 +446,7 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 
 	kernel_strcpy( new->task.name, name );
 
-	kernel_memset( &( new->task.context ), 0, sizeof( struct reg_context ) );
+	kernel_memset( &( new->task.context ), 0, sizeof( struct regs_context ) );
 
 	//kernel_printf( "Down here3\n" );
 

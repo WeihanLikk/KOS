@@ -1,3 +1,3 @@
-OBJS := mm_rbtree.o tlbload.o vma.o vmm.o
+OBJS := vm.o tlb.o
 
 include $(SUB_MAKE_INCLUDE)

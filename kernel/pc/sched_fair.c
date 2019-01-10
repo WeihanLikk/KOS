@@ -1,4 +1,4 @@
-#include <kos/pc/sched.h>
+#include <zjunix/pc/sched.h>
 #include <driver/vga.h>
 
 #define WMULT_CONST ( ~0UL )

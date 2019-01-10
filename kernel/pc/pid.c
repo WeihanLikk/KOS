@@ -1,6 +1,6 @@
-#include <kos/pc/sched.h>
+#include <zjunix/pc/sched.h>
 #include <driver/vga.h>
-#include <kos/bootmm.h>
+#include <zjunix/bootmm.h>
 
 static pidmap_t pidmap_array[ 100 ];
 // static struct hlist_head *pid_hash;

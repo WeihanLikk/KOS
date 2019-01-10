@@ -1,9 +1,9 @@
 #ifndef _TIME_H
 #define _TIME_H
 #include <intr.h>
-#include <kos/time.h>
+#include <zjunix/time.h>
 
-void get_time_string(unsigned int ticks_high, unsigned int ticks_low, char *buf);
+void get_time_string( unsigned int ticks_high, unsigned int ticks_low, char *buf );
 
 extern unsigned int month;
 extern unsigned int day;
