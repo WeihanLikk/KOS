@@ -355,6 +355,20 @@ void parse_cmd()
 	{
 		result = vfs_cd( param );
 	}
+	else if ( kernel_strcmp( ps_buffer, "mnt" ) == 0 )
+	{
+		// kernel_printf( "In mount\nparam = %s", param );
+
+		result = vfs_mnt( param );
+	}
+	else if ( kernel_strcmp( ps_buffer, "umnt" ) == 0 )
+	{
+		result = vfs_umnt( param );
+	}
+	else if ( kernel_strcmp( ps_buffer, "mmdir" ) == 0 )
+	{
+		result = vfs_create( param );
+	}
 	else if ( kernel_strcmp( ps_buffer, "exec" ) == 0 )
 	{
 		result = execk( 1, (void *)param, 0 );

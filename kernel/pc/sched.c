@@ -15,6 +15,7 @@ struct cfs_rq my_cfs_rq;
 struct task_struct *idle_task;
 struct task_struct *current_task = 0;
 int countx = 0;
+unsigned long times = 0;
 unsigned long total = 0;
 
 struct task_struct *p;
@@ -378,6 +379,7 @@ static void scheduler( struct regs_context *pt_context )
 
 		if ( likely( prev != next ) )
 		{
+			kernel_printf( "there is a task change\n" );
 			copy_context( pt_context, &( cfs_rq->current_task->context ) );
 
 			cfs_rq->current_task = next;
@@ -435,7 +437,7 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	new->task.ASID = newpid;
 	new->task.parent = cfs_rq->current_task->pid;
 	new->task.policy = SCHED_NORMAL;
-	new->task.prioiry = NICE_TO_PRIO( 10 );
+	new->task.prioiry = NICE_TO_PRIO( -20 );
 	new->task.THREAD_FLAG = 0;
 
 	//kernel_memset( &( new->task.se ), 0, sizeof( struct sched_entity ) );
@@ -480,7 +482,13 @@ int test_vm( unsigned int argc, void *args )
 	if ( kernel_strcmp( args, "loop" ) == 0 )
 	{
 		while ( 1 )
-			;
+		{
+			times++;
+			if ( times == 1000 )
+			{
+				kernel_printf( "In loop...\n" );
+			}
+		}
 	}
 	for ( int i = 0; i < 1000000; i++ )
 	{
