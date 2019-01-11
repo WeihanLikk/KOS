@@ -486,10 +486,15 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 
 int test_vm( unsigned int argc, void *args )
 {
+	struct task_struct *p = my_cfs_rq.current_task;
 	kernel_printf( "**************\n" );
-	kernel_printf( "pid:%x, asid:%x\n", current_task->pid, current_task->ASID );
-	kernel_printf( "mm:%x, pgd:%x\n", current_task->mm, current_task->mm->pgd );
+	kernel_printf( "pid:%x, asid:%x\n", p->pid, p->ASID );
+	//kernel_printf( "mm:%x\n", p->mm );
 
+	for ( int i = 0; i < 10; i++ )
+	{
+		kernel_printf( "in loops\n" );
+	}
 	unsigned int *test_addr = (unsigned int *)0;
 	unsigned int test_val = 0, test_val2;
 	*test_addr = 3;
@@ -518,22 +523,23 @@ int test_vm( unsigned int argc, void *args )
 
 int test_vma( unsigned int argc, void *args )
 {
+	struct task_struct *p = my_cfs_rq.current_task;
 	kernel_printf( "**************\n" );
-	kernel_printf( "pid:%x,asid:%x\n", current_task->pid, current_task->ASID );
-	kernel_printf( "mm:%x\n", current_task->mm );
-	kernel_printf( "after create process, vma number: %x\n", current_task->mm->map_count );
+	kernel_printf( "pid:%x,asid:%x\n", p->pid, p->ASID );
+	kernel_printf( "mm:%x\n", p->mm );
+	kernel_printf( "after create process, vma number: %x\n", p->mm->map_count );
 	unsigned int addr = do_mmap( 0x1, 15, 0, 0 );
-	kernel_printf( "after 1 do_mmap, vma number:%x\n", current_task->mm->map_count );
-	kernel_printf( ",mmap_cache:%x\n", current_task->mm->mmap_cache );
+	kernel_printf( "after 1 do_mmap, vma number:%x\n", p->mm->map_count );
+	kernel_printf( ",mmap_cache:%x\n", p->mm->mmap_cache );
 	addr = do_mmap( 0x2000, 31, 0, 0 );
-	kernel_printf( "after 2 do_mmap, vma number:%x\n", current_task->mm->map_count );
-	kernel_printf( ",mmap_cache:%x\n", current_task->mm->mmap_cache );
+	kernel_printf( "after 2 do_mmap, vma number:%x\n", p->mm->map_count );
+	kernel_printf( ",mmap_cache:%x\n", p->mm->mmap_cache );
 	do_unmmap( 0x2000, 31, 0, 0 );
-	kernel_printf( "Unmap done. %d vma(s) left\n", current_task->mm->map_count );
+	kernel_printf( "Unmap done. %d vma(s) left\n", p->mm->map_count );
 	unsigned int badaddr_test = 0x3000;
 	kernel_getchar();
 	kernel_printf( "When badaddr:%x...\n", badaddr_test );
-	kernel_printf( "TLB_refill error: Invalid Vaddr Access! (is not in vma)pid: %d\n", current_task->pid );
+	kernel_printf( "TLB_refill error: Invalid Vaddr Access! (is not in vma)pid: %d\n", p->pid );
 	while ( 1 )
 		;
 	kernel_getchar();

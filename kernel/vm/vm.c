@@ -10,7 +10,7 @@ struct vma_struct *find_vma_intersection( struct mm_struct *mm, unsigned long st
 struct vma_struct *find_vma_prepare( struct mm_struct *mm, unsigned long addr );
 void insert_vma_struct( struct mm_struct *mm, struct vma_struct *area );
 void exit_mmap( struct mm_struct *mm );
-void pgd_delete( pgd_t *pgd );
+void pgd_delete( unsigned int *pgd );
 
 /* Inplement of RBTree */
 static Node *rb_search( Node *node, unsigned long addr )
@@ -532,7 +532,7 @@ struct mm_struct *mm_create()
 	mm->mmap = 0;
 	mm->mmap_cache = 0;
 	mm->mm_rb = 0;
-	mm->map_count = 0;
+	mm->map_count = 1;
 	mm->mm_users = 1;
 	mm->mm_count = 1;
 	return 0;
@@ -551,7 +551,7 @@ void mm_delete( struct mm_struct *mm )
 	kfree( mm );
 }
 
-void pgd_delete( pgd_t *pgd )
+void pgd_delete( unsigned int *pgd )
 {
 	int i, j;
 	unsigned int pde, pte;
@@ -671,7 +671,7 @@ unsigned long get_unmapped_area( unsigned long addr, unsigned long len, unsigned
 {
 	int check = 0;
 	struct vm_area_struct *vma, *tmp_vma;
-	struct mm_struct *mm = current_task->mm;  //全局变量，当前线程对应的task_struct
+	struct mm_struct *mm = my_cfs_rq.current_task->mm;  //全局变量，当前线程对应的task_struct
 	Node *node, *tmp_node;
 	//addr = UPPER_ALLIGN(addr, PAGE_SIZE);   // Allign to page size
 	if ( addr + len > KERNEL_ENTRY ) return -1;
@@ -788,7 +788,7 @@ struct vm_area_struct *find_vma( struct mm_struct *mm, unsigned long addr, int w
 
 struct vm_area_struct *create_vma( unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags )
 {
-	struct mm_struct *mm = current_task->mm;
+	struct mm_struct *mm = my_cfs_rq.current_task->mm;
 	struct vm_area_struct *vma;
 	vma = kmalloc( sizeof( struct vm_area_struct ) );
 	if ( !vma ) return 0;
@@ -803,7 +803,7 @@ struct vm_area_struct *create_vma( unsigned long addr, unsigned long len, unsign
 // Mapping a region
 unsigned int do_mmap( unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags )
 {
-	struct mm_struct *mm = current_task->mm;
+	struct mm_struct *mm = my_cfs_rq.current_task->mm;
 	struct vm_area_struct *vma, *prev;
 	addr = UPPER_ALLIGN( addr, PAGE_SIZE );  // Allign to page size
 	Node *node;
@@ -857,7 +857,7 @@ unsigned int do_mmap( unsigned long addr, unsigned long len, unsigned long prot,
 
 unsigned int do_unmmap( unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags )
 {
-	struct mm_struct *mm = current_task->mm;
+	struct mm_struct *mm = my_cfs_rq.current_task->mm;
 	struct vm_area_struct *vma, *prev;
 	//     Node *node, *next_node;
 	//     if (addr>KERNEL_ENTRY || len+addr>KERNEL_ENTRY) return -1;  // Bad addr
@@ -950,7 +950,7 @@ void exit_mmap( struct mm_struct *mm )
 
 int is_in_vma( unsigned long addr )
 {
-	struct mm_struct *mm = current_task->mm;
+	struct mm_struct *mm = my_cfs_rq.current_task->mm;
 	struct vm_area_struct *vma = 0;
 	vma = find_vma( mm, addr, 0 );
 	if ( !vma || vma->vm_start > addr )

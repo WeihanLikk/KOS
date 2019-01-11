@@ -381,6 +381,10 @@ void parse_cmd()
 	{
 		result = vfs_create( param );
 	}
+	else if ( kernel_strcmp( ps_buffer, "vi" ) == 0 )
+	{
+		result = vfs_vi( param );
+	}
 	else if ( kernel_strcmp( ps_buffer, "exec" ) == 0 )
 	{
 		result = execk( 1, (void *)param, 0, 0 );

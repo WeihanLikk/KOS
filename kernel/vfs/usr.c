@@ -54,6 +54,25 @@ u32 vfs_cat( const u8 *path )
 	return 0;
 }
 
+u32 vfs_vi( const u8 *tot )
+{
+	// u8 *path = tot;
+	// u8 *content = tot;
+	// while ( *content++ != ' ' )
+	// 	;
+	// *( content - 1 ) = '\0';
+
+	// struct file *file = vfs_open( path, O_RDONLY, base );
+	// if ( IS_ERR_OR_NULL( file ) )
+	// {
+	// 	if ( PTR_ERR( file ) == -ENOENT )
+	// 		kernel_printf( "File not found!\n" );
+	// 	return PTR_ERR( file );
+	// }
+
+	return 0;
+}
+
 // 更改当前的工作目录
 u32 vfs_cd( const u8 *path )
 {
