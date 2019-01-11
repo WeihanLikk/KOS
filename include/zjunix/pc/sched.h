@@ -267,11 +267,12 @@ void sys_prioiry_pid( int increment, int pid );
 extern void switch_ex( struct regs_context *regs );
 extern void switch_wa( struct regs_context *des, struct regs_context *src );
 int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), unsigned int argc, void *args, int is_vm );
-int execk( unsigned int argc, void *args, int is_wait );
+int execk( unsigned int argc, void *args, int is_wait, int vm );
 void do_exit();
 int pc_kill( pid_t pid );
 void waitpid( pid_t pid );
 void sched_init();
 void print_info();
 int execkwait( unsigned int argc, void *args );
+int execvm( unsigned int argc, void *args, int is_wait, int vm );
 #endif

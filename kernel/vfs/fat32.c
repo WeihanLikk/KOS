@@ -119,8 +119,8 @@ u32 init_fat32( u32 base )
 	fat32_fs_type = (struct file_system_type *)kmalloc( sizeof( struct file_system_type ) );
 	if ( fat32_fs_type == 0 )
 		return -ENOMEM;
-	fat32_fs_type->name = "fat32__";
-	fat32_fs_type->name[ 6 ] = suffix;
+	fat32_fs_type->name = "fat32";
+	// fat32_fs_type->name[ 6 ] = suffix;
 
 	// 构建 super_block 结构
 	fat32_sb = (struct super_block *)kmalloc( sizeof( struct super_block ) );

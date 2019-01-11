@@ -436,6 +436,11 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 		return 0;
 	}
 
+	if ( is_vm )
+	{
+		new->task.mm = mm_create();
+	}
+
 	new->task.pid = newpid;
 	new->task.ASID = newpid;
 	new->task.parent = cfs_rq->current_task->pid;
@@ -477,6 +482,71 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 
 	kernel_printf( "task: %x create\n", new->task.pid );
 	return new->task.pid;
+}
+
+int test_vm( unsigned int argc, void *args )
+{
+	kernel_printf( "**************\n" );
+	kernel_printf( "pid:%x, asid:%x\n", current_task->pid, current_task->ASID );
+	kernel_printf( "mm:%x, pgd:%x\n", current_task->mm, current_task->mm->pgd );
+
+	unsigned int *test_addr = (unsigned int *)0;
+	unsigned int test_val = 0, test_val2;
+	*test_addr = 3;
+	int i;
+	for ( i = 0; i < 20; i++ )
+	{
+		//重复访问用户空间虚拟地址,触发TLB miss异常,进行TLB refill处理操作
+		test_addr = (unsigned int *)( i * 4 );
+		test_val += 3;
+		*test_addr = test_val;
+		kernel_printf( "vaddr:%x, wirte:%x, ", (unsigned int)test_addr, test_val );
+		test_val2 = *test_addr;
+		kernel_printf( "read:%x\n", test_val2 );
+	}
+
+	// #ifdef TLB_DEBUG
+	// kernel_getchar();
+	// #endif
+	kernel_printf( "******End of testing virtual address allocation********\n" );
+	kernel_getchar();
+
+	//进程退出
+	do_exit( 0 );
+	return 0;
+}
+
+int test_vma( unsigned int argc, void *args )
+{
+	kernel_printf( "**************\n" );
+	kernel_printf( "pid:%x,asid:%x\n", current_task->pid, current_task->ASID );
+	kernel_printf( "mm:%x\n", current_task->mm );
+	kernel_printf( "after create process, vma number: %x\n", current_task->mm->map_count );
+	unsigned int addr = do_mmap( 0x1, 15, 0, 0 );
+	kernel_printf( "after 1 do_mmap, vma number:%x\n", current_task->mm->map_count );
+	kernel_printf( ",mmap_cache:%x\n", current_task->mm->mmap_cache );
+	addr = do_mmap( 0x2000, 31, 0, 0 );
+	kernel_printf( "after 2 do_mmap, vma number:%x\n", current_task->mm->map_count );
+	kernel_printf( ",mmap_cache:%x\n", current_task->mm->mmap_cache );
+	do_unmmap( 0x2000, 31, 0, 0 );
+	kernel_printf( "Unmap done. %d vma(s) left\n", current_task->mm->map_count );
+	unsigned int badaddr_test = 0x3000;
+	kernel_getchar();
+	kernel_printf( "When badaddr:%x...\n", badaddr_test );
+	kernel_printf( "TLB_refill error: Invalid Vaddr Access! (is not in vma)pid: %d\n", current_task->pid );
+	while ( 1 )
+		;
+	kernel_getchar();
+// *badaddr_test = 1;!
+#ifdef TLB_DEBUG
+	kernel_getchar();
+#endif
+	kernel_printf( "******End of testing vma********\n" );
+	kernel_getchar();
+
+	//进程退出
+	do_exit( 0 );
+	return 0;
 }
 
 int loop( unsigned int argc, void *args )
@@ -539,15 +609,31 @@ int execkwait( unsigned int argc, void *args )
 	return 1;
 }
 
-int execk( unsigned int argc, void *args, int is_wait )
+int execk( unsigned int argc, void *args, int is_wait, int vm )
 {
-	pid_t newpid = task_fork( args, (void *)test, argc, args, 0 );
+	pid_t newpid;
+	if ( vm == 1 )
+	{
+		newpid = task_fork( args, (void *)test_vm, argc, args, 1 );
+	}
+	else
+	{
+		newpid = task_fork( args, (void *)test, argc, args, 0 );
+	}
 
 	if ( is_wait )
 	{
 		kernel_printf( "here shell begin to wait!\n" );
 		waitpid( newpid );
 	}
+	return 1;
+}
+
+int execvm( unsigned int argc, void *args, int is_wait, int vm )
+{
+	pid_t newpid;
+	newpid = task_fork( args, (void *)test_vma, argc, args, 1 );
+
 	return 1;
 }
 

@@ -41,49 +41,132 @@ void test_proc()
 	}
 }
 
-void testMem()
+void testMem( unsigned int size )
 {
 	int i;
-	int total = 100;
+	int total = 5;
 	//int sizeArr[200];
 	int *addrArr[ 200 ];
-	int size = 100;
 	//for (i=0; i<total; i++) sizeArr[i] = 100;
-
+	buddy_info();
 	// for (i=10; i<100; i++) sizeArr[i] = 2<<12;
 	// for (i=100; i<total; i++) sizeArr[i] = 4<<12;
-	for ( i = 0; i < total; i++ ) addrArr[ i ] = kmalloc( size );
-	kernel_printf( "Allocate %d blocks sized %d byte\n", total, size );
+	kernel_printf( "Allocate %d times *  %d pages:\n", total, size );
+	for ( i = 0; i < total; i++ )
+	{
+		addrArr[ i ] = alloc_pages( size );
+		kernel_printf( "#%d: %x\t", i, addrArr[ i ] );
+		if ( i % 3 == 2 ) kernel_printf( "\n" );
+	}
+	kernel_printf( "Allocate success!\n" );
 	// bootmap_info("bootmm");
 	buddy_info();
 	// kernel_getkey();
-
-	for ( i = 0; i < total; i++ ) kfree( addrArr[ i ] );
-	kernel_printf( "Deallocate\n" );
+	kernel_printf( "Deallocate the pages:\n" );
+	int bplevel = 0;
+	while ( 1 << bplevel < size )
+	{
+		bplevel++;
+	}
+	for ( i = 0; i < total; i++ )
+	{
+		free_pages( addrArr[ i ], bplevel );
+		//kernel_printf("addr%d %x done\t", i, addrArr[i]);
+		// if(i==4) kernel_printf("\n");
+	}
+	kernel_printf( "Deallocate all pages success!\n" );
 	// bootmap_info("bootmm");
 	buddy_info();
 }
 
-void testMem2()
+void testMem2( unsigned int size )
 {
-	//     static int i;
-	//     static int total = 10;
-	//     static int sizeArr[200];
-	//     static int *addrArr[200];
-	//     for (i=0; i<total; i++) sizeArr[i] = 4096;
+	int i;
+	int total = 10;
+	int sizeArr[ 200 ];
+	int *addrArr[ 200 ];
+	for ( i = 0; i < total; i++ ) sizeArr[ i ] = size;
+	buddy_info();
+	// for (i=10; i<100; i++) sizeArr[i] = 2<<12;
+	// for (i=100; i<total; i++) sizeArr[i] = 4<<12;
+	kernel_printf( "Allocate %d blocks of %d byte:\n", 10, size );
+	for ( i = 0; i < total; i++ )
+	{
+		addrArr[ i ] = kmalloc( sizeArr[ i ] );
+		kernel_printf( "#%d: %x\t", i, addrArr[ i ] );
+		if ( i % 3 == 2 ) kernel_printf( "\n" );
+	}
+	kernel_printf( "Allocate success!\n" );
+	// bootmap_info("bootmm");
+	buddy_info();
+	// kernel_getkey();
 
-	//     // for (i=10; i<100; i++) sizeArr[i] = 2<<12;
-	//     // for (i=100; i<total; i++) sizeArr[i] = 4<<12;
-	//     for (i=0; i<total; i++) addrArr[i] = kmalloc(sizeArr[i]);
-	//     kernel_printf("Allocate %d blocks sized %d byte\n", 20, 4096);
-	//     // bootmap_info("bootmm");
-	//     buddy_info();
-	//     // kernel_getkey();
-
-	//     for (i=0; i<total; i++) kfree(addrArr[i]);
-	//     kernel_printf("Deallocate\n");
-	//     // bootmap_info("bootmm");
-	//     buddy_info();
+	for ( i = 0; i < total; i++ )
+	{
+		kfree( addrArr[ i ] );
+		// kernel_printf("addr%d %x done\n", i, addrArr[i]);
+	}
+	kernel_printf( "Deallocate all blocks success!\n" );
+	// bootmap_info("bootmm");
+	buddy_info();
+}
+void testMem3( unsigned int size )
+{
+	kernel_printf( "******now test dynamically creating and deleting cache*****\n" );
+	int i;
+	int total = 10;
+	int sizeArr[ 200 ];
+	int *addrArr[ 200 ], *addrArr2[ 200 ];
+	for ( i = 0; i < total; i++ ) sizeArr[ i ] = size;
+	// for (i=10; i<100; i++) sizeArr[i] = 2<<12;
+	// for (i=100; i<total; i++) sizeArr[i] = 4<<12;
+	kernel_printf( "Dynamic Allocating...\n", 10, size );
+	kernel_printf( "Allocate %d blocks of objects sized %d byte \n", 6, size );
+	for ( i = 0; i < total; i++ )
+	{
+		addrArr[ i ] = kmalloc_object_pool( sizeArr[ i ], 0 );
+		kernel_printf( "#%d: %x\t", i, addrArr[ i ] );
+		if ( i % 3 == 2 ) kernel_printf( "\n" );
+	}
+	kernel_printf( "Allocate success!\n" );
+	int cache_number = kmem_cache_number();
+	slab_info();
+	kernel_printf( "******dynamically creating cache test success*****\n" );
+	// bootmap_info("bootmm");
+	// kernel_getkey();
+	kernel_getchar();
+	kernel_printf( "Allocate %d blocks of a different kind objects sized %d byte \n", 6, size );
+	for ( i = 0; i < total; i++ )
+	{
+		addrArr2[ i ] = kmalloc_object_pool( sizeArr[ i ], 1 );
+		kernel_printf( "#%d: %x\t", i, addrArr2[ i ] );
+		if ( i % 3 == 2 ) kernel_printf( "\n" );
+	}
+	kernel_printf( "Allocate success!\n" );
+	slab_info();
+	kernel_printf( "******object pool test success*****\n" );
+	kernel_getchar();
+	for ( i = 0; i < total; i++ )
+	{
+		kfree_object_pool( addrArr[ i ] );
+		// kernel_printf("addr%d %x done\n", i, addrArr[i]);
+	}
+	kernel_printf( "Deallocate all blocks success!\n" );
+	obj_cache_delete( 3, 0 );
+	kernel_printf( "Delete the first cache of size %d success!\n", size );
+	slab_info();
+	kernel_getchar();
+	//bootmap_info("bootmm");
+	for ( i = 0; i < total; i++ )
+	{
+		kfree_object_pool( addrArr2[ i ] );
+		// kernel_printf("addr%d %x done\n", i, addrArr[i]);
+	}
+	kernel_printf( "Deallocate all blocks success!\n" );
+	obj_cache_delete( 3, 1 );
+	kernel_printf( "Delete the second cache of size %d success!\n", size );
+	slab_info();
+	kernel_printf( "******dynamically deleting cache test success*****\n" );
 }
 
 void test_sync()
@@ -267,77 +350,6 @@ void parse_cmd()
 		sd_write_block( sd_buffer, 23128, 1 );
 		kernel_puts( "sdwz\n", 0xfff, 0 );
 	}
-	//     } else if (kernel_strcmp(ps_buffer, "mminfo") == 0) {
-	//         bootmap_info("bootmm");
-	//         buddy_info();
-	//     } else if (kernel_strcmp(ps_buffer, "mmtest") == 0) {
-	//         kernel_printf("kmalloc : %x, size = 1KB\n", kmalloc(1024));
-	//     } else if (kernel_strcmp(ps_buffer, "ps") == 0) {
-	//     //    result = print_proc();
-	//         result = 0;
-	//         disable_interrupts();
-	//   //      print_task();
-	//         print_sched();
-	//         // print_exited();
-	//         // print_wait();
-	//         enable_interrupts();
-	//         kernel_printf("ps return with %d\n", result);
-	//     } else if (kernel_strcmp(ps_buffer, "kill") == 0) {
-	//         int pid = param[0] - '0';
-	//         kernel_printf("Killing process %d\n", pid);
-	//         result = pc_kill(pid);
-	//         kernel_printf("kill return with %d\n", result);
-	//     } else if (kernel_strcmp(ps_buffer, "time") == 0) {
-	//         unsigned int init_gp;
-	//         asm volatile("la %0, _gp\n\t" : "=r"(init_gp));
-	// //       pc_create(2, system_time_proc, (unsigned int)kmalloc(4096), init_gp, "time");
-	//     }
-	//     // else if (kernel_strcmp(ps_buffer, "proc") == 0) {
-	//     //     result = proc_demo_create();
-	//     //     kernel_printf("proc return with %d\n", result);
-	//     // }
-	//     else if (kernel_strcmp(ps_buffer, "vi") == 0) {
-	//         result = myvi(param);
-	//         kernel_printf("vi return with %d\n", result);
-	//     }
-	//     else if (kernel_strcmp(ps_buffer, "mt") == 0) {
-	//         testMem();
-	//         kernel_printf("Memory test return with 0\n");
-	//     }
-	//     else if (kernel_strcmp(ps_buffer, "mt2") == 0) {
-	//         testMem2();
-	//         kernel_printf("Memory test2 return with 0\n");
-	//     }
-
-	//     else if (kernel_strcmp(ps_buffer, "execk") == 0) {
-	//         //debug
-	//         kernel_printf("Enter execk\n");
-	//         //debug
-	//         result = exec_from_kernel(1, (void*)param, 0, 0);
-	//         kernel_printf("execk return with %d\n", result);
-	//     } else if (kernel_strcmp(ps_buffer, "execk2") == 0) {
-	//         result = exec_from_kernel(1, (void*)param, 1, 0);
-	//         kernel_printf(ps_buffer, "execk2 return with %d\n");
-	//     } else if (kernel_strcmp(ps_buffer, "vm") == 0) {
-	//         struct mm_struct* mm = mm_create();
-	//         kernel_printf("Create succeed. %x\n", mm);
-	//         mm_delete(mm);
-	//     } else if (kernel_strcmp(ps_buffer, "execk3") == 0) {
-	//         result = exec_from_kernel(1, (void*)param, 0, 1);
-	//         kernel_printf(ps_buffer, "execk3 return with %d\n",result);
-	//     } else if (kernel_strcmp(ps_buffer, "ey") == 0) {
-	//         result = exec_from_kernel(1, "/seg.bin", 0, 1);
-	//         kernel_printf(ps_buffer, "execk3 return with %d\n", result);
-	//     } else if (kernel_strcmp(ps_buffer, "es") == 0) {
-	//         result = exec_from_kernel(1, "/syscall.bin", 0, 1);
-	//         kernel_printf(ps_buffer, "execk3 return with %d\n", result);
-	//     } else if (kernel_strcmp(ps_buffer, "tlb") == 0) {
-	//         // result = tlb_test();
-	//         // kernel_printf(ps_buffer, "tlb_test return with %d\n", result);
-	//     } else if (kernel_strcmp(ps_buffer, "sync") == 0) {
-	//         result = sync_demo_create();
-	//         kernel_printf("proc return with %d\n", result);
-	//     }
 
 	else if ( kernel_strcmp( ps_buffer, "cat" ) == 0 )
 	{
@@ -371,7 +383,7 @@ void parse_cmd()
 	}
 	else if ( kernel_strcmp( ps_buffer, "exec" ) == 0 )
 	{
-		result = execk( 1, (void *)param, 0 );
+		result = execk( 1, (void *)param, 0, 0 );
 	}
 	else if ( kernel_strcmp( ps_buffer, "ewait" ) == 0 )
 	{
@@ -384,7 +396,7 @@ void parse_cmd()
 	}
 	else if ( kernel_strcmp( ps_buffer, "wait" ) == 0 )
 	{
-		result = execk( 1, (void *)param, 1 );
+		result = execk( 1, (void *)param, 1, 0 );
 	}
 	else if ( kernel_strcmp( ps_buffer, "waitpid" ) == 0 )
 	{
@@ -432,6 +444,46 @@ void parse_cmd()
 		{
 			kernel_printf( "Error in format, the first argument is a blank\n" );
 		}
+	}
+	else if ( kernel_strcmp( ps_buffer, "testvm" ) == 0 )
+	{
+		result = execk( 1, (void *)param, 0, 1 );
+		//kernel_printf(ps_buffer, "execk3 return with %d\n",result);
+	}
+	else if ( kernel_strcmp( ps_buffer, "testvma" ) == 0 )
+	{
+		result = execvm( 1, (void *)param, 0, 1 );
+		//kernel_printf(ps_buffer, "execk4 return with %d\n",result);
+	}
+	else if ( kernel_strcmp( ps_buffer, "testb" ) == 0 )
+	{
+		int size = 0;
+		for ( int i = 0; param[ i ] != '\0'; i++ )
+		{
+			size = size * 10 + param[ i ] - '0';
+		}
+		kernel_printf( "Testing Buddy System...\n" );
+		testMem( size );
+	}
+	else if ( kernel_strcmp( ps_buffer, "tests" ) == 0 )
+	{
+		int size = 0;
+		for ( int i = 0; param[ i ] != '\0'; i++ )
+		{
+			size = size * 10 + param[ i ] - '0';
+		}
+		kernel_printf( "Testing Slab System...\n" );
+		testMem2( size );
+	}
+	else if ( kernel_strcmp( ps_buffer, "testso" ) == 0 )
+	{
+		int size = 0;
+		for ( int i = 0; param[ i ] != '\0'; i++ )
+		{
+			size = size * 10 + param[ i ] - '0';
+		}
+		kernel_printf( "Testing Slab System's object pool...\n" );
+		testMem3( size );
 	}
 
 	else

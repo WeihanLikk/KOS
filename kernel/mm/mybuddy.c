@@ -5,6 +5,7 @@
 #include <zjunix/lock.h>
 #include <zjunix/utils.h>
 
+#define MAX_ORDER ( LIST_NUM - 1 )
 unsigned int kernel_start_pfn, kernel_end_pfn;
 
 struct page *pages;
@@ -13,11 +14,13 @@ struct buddy_sys buddy;
 // Display buddy info, for debug
 void buddy_info() {
     unsigned int index;
-    kernel_printf("Buddy-system :\n");
-    kernel_printf("\tstart page-frame number : %x\n", buddy.buddy_start_pfn);
-    kernel_printf("\tend page-frame number : %x\n", buddy.buddy_end_pfn);
-    for (index = 0; index <= MAX_BUDDY_ORDER; ++index) {
-        kernel_printf("\t(%x)# : %x frees\n", index, buddy.freelist[index].nr_free);
+    kernel_printf("Buddy System :\n");
+    kernel_printf("\tstart pfn : %x", buddy.buddy_start_pfn);
+    kernel_printf("\tend pfn : %x\n", buddy.buddy_end_pfn);
+    for (index = 0; index <= MAX_ORDER; ++index) {
+        kernel_printf("\t2^%x: %x frees", index, buddy.free_area[index].nr_free);
+        if(index%2 == 1)
+        kernel_printf("\n");
     }
 }
 
@@ -30,7 +33,7 @@ void init_pages(unsigned int start_pfn, unsigned int end_pfn) {
         (pages + i)->virtual = (void *)(-1);
         (pages + i)->bplevel = 0;
         (pages + i)->slabp = 0;  // initially, the free space is the whole page
-        INIT_LIST_HEAD(&(pages[i].list));
+        INIT_LIST_HEAD(&(pages[i].lru));
     }
 }
 
@@ -63,14 +66,14 @@ void init_buddy() {
     kernel_end_pfn >>= PAGE_SHIFT;
 
     // Buddy system occupies the space after kernel part
-    buddy.buddy_start_pfn = UPPER_ALLIGN(kernel_end_pfn, 1<<MAX_BUDDY_ORDER);
+    buddy.buddy_start_pfn = UPPER_ALLIGN(kernel_end_pfn, 1<<MAX_ORDER);
     // Remain 2 pages for I/O
-    buddy.buddy_end_pfn = bmm.max_pfn & ~((1 << MAX_BUDDY_ORDER) - 1);
+    buddy.buddy_end_pfn = bmm.max_pfn & ~((1 << MAX_ORDER) - 1);
 
     // Init freelists of all bplevels
-    for (i = 0; i < MAX_BUDDY_ORDER + 1; i++) {
-        buddy.freelist[i].nr_free = 0;
-        INIT_LIST_HEAD(&(buddy.freelist[i].free_head));
+    for (i = 0; i < MAX_ORDER + 1; i++) {
+        buddy.free_area[i].nr_free = 0;
+        INIT_LIST_HEAD(&(buddy.free_area[i].free_list));
     }
     buddy.start_page = pages + buddy.buddy_start_pfn;
     init_lock(&(buddy.lock));
@@ -95,7 +98,7 @@ void __free_pages(struct page *pbpage, unsigned int bplevel) {
 
     page_idx = pbpage - buddy.start_page;
 
-    while (bplevel < MAX_BUDDY_ORDER) {
+    while (bplevel < MAX_ORDER) {
         // Find pair to combine
         pair_idx = page_idx ^ (1 << bplevel);
         pair_page = pbpage + (pair_idx - page_idx);
@@ -114,8 +117,8 @@ void __free_pages(struct page *pbpage, unsigned int bplevel) {
             break;      // Its pair has been allocated or reserved
         }
         // Delete pair from freelist, and combine them
-        list_del_init(&pair_page->list);
-        --buddy.freelist[bplevel].nr_free;
+        list_del_init(&pair_page->lru);
+        --buddy.free_area[bplevel].nr_free;
         combined_idx = pair_idx & page_idx;
         // Set the bplevel of block being combined as -1
         if (combined_idx == pair_idx) set_bplevel(pair_page, -1);
@@ -138,12 +141,12 @@ void __free_pages(struct page *pbpage, unsigned int bplevel) {
     // prev->next = new;
     // next->prev = new;
 
-    list_add(&(pbpage->list), &(buddy.freelist[bplevel].free_head));
+    list_add(&(pbpage->lru), &(buddy.free_area[bplevel].free_list));
     #ifdef BUDDY_DEBUG
     kernel_printf("%x %x\n", pbpage->list.next, buddy.freelist[bplevel].free_head.next);
     // while (1);
     #endif
-    ++buddy.freelist[bplevel].nr_free;
+    ++buddy.free_area[bplevel].nr_free;
     
     unlock(&buddy.lock);
     
@@ -152,14 +155,14 @@ void __free_pages(struct page *pbpage, unsigned int bplevel) {
 struct page *__alloc_pages(unsigned int bplevel) {
     unsigned int current_order, size;
     struct page *page, *buddy_page;
-    struct freelist *freeL;
+    struct free_area *freeL;
 
     lockup(&buddy.lock);
 
     // Search free pages
-    for (current_order = bplevel; current_order <= MAX_BUDDY_ORDER; ++current_order) {
-        freeL = buddy.freelist + current_order;
-        if (!list_empty(&(freeL->free_head)))
+    for (current_order = bplevel; current_order <= MAX_ORDER; ++current_order) {
+        freeL = buddy.free_area + current_order;
+        if (!list_empty(&(freeL->free_list)))
             goto found;
     }
 
@@ -168,8 +171,8 @@ struct page *__alloc_pages(unsigned int bplevel) {
     return 0;
 
 found:
-    page = container_of(freeL->free_head.next, struct page, list);
-    list_del_init(&(page->list));
+    page = container_of(freeL->free_list.next, struct page, lru);
+    list_del_init(&(page->lru));
     set_bplevel(page, bplevel);
     set_flag(page, BUDDY_ALLOCED);
     --(freeL->nr_free);
@@ -181,7 +184,7 @@ found:
         size >>= 1;
         buddy_page = page + size;
         // Add the ramaining half into free list
-        list_add(&(buddy_page->list), &(freeL->free_head));
+        list_add(&(buddy_page->lru), &(freeL->free_list));
         ++(freeL->nr_free);
         set_bplevel(buddy_page, current_order);
         set_flag(buddy_page, BUDDY_FREE);
