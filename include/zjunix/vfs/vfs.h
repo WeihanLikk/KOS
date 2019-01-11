@@ -79,6 +79,7 @@ struct master_boot_record
 	u32 m_count;						// 分区数
 	u32 m_base[ DPT_MAX_ENTRY_COUNT ];  // 每个分区的基地址
 	u8 m_data[ SECTOR_SIZE ];			// 数据
+	u8 m_type[ DPT_MAX_ENTRY_COUNT ];   // type of partition
 };
 
 // 记录文件系统类型信息
@@ -276,7 +277,7 @@ u32 vfs_read_MBR();
 struct file *vfs_open( const u8 *, u32, u32 );
 u32 open_namei( const u8 *, u32, u32, struct nameidata * );
 u32 path_lookup( const u8 *, u32, struct nameidata * );
-u32 link_path_walk( const u8 *, struct nameidata * );
+u32 link_path_walk( const u8 *, struct nameidata *, u32 );
 void follow_dotdot( struct vfsmount **, struct dentry ** );
 u32 do_lookup( struct nameidata *, struct qstr *, struct path * );
 struct dentry *real_lookup( struct dentry *, struct qstr *, struct nameidata * );

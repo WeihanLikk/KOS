@@ -105,7 +105,7 @@ u32 mount_fs( u8 *fsname, struct dentry *parent )
 	struct list_head *begin = &( root_mnt->mnt_hash );
 	struct list_head *a = begin->next;
 	struct vfsmount *mnt;
-	static u8 suffix = 'A';
+	static u8 suffix = 'T';
 
 	suffix++;
 

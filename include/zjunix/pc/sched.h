@@ -205,6 +205,7 @@ struct task_struct
 	struct mm_struct *mm;
 	unsigned int ASID;
 
+	struct task_struct *parentx;
 	// struct task_struct *parent;
 	// struct list_head children; /* list of my children */
 	// struct list_head sibling;  /* linkage in my parent's children list */
@@ -272,5 +273,5 @@ int pc_kill( pid_t pid );
 void waitpid( pid_t pid );
 void sched_init();
 void print_info();
-int xxx;
+int execkwait( unsigned int argc, void *args );
 #endif

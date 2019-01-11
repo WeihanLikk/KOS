@@ -14,8 +14,10 @@ struct list_head tasks;
 struct cfs_rq my_cfs_rq;
 struct task_struct *idle_task;
 struct task_struct *current_task = 0;
+struct task_struct *shell;
 int countx = 0;
 unsigned long times = 0;
+unsigned long waits = 0;
 unsigned long total = 0;
 
 struct task_struct *p;
@@ -285,6 +287,7 @@ static void create_shell_process( char *name, void ( *entry )( unsigned int argc
 
 	my_cfs_rq.current_task = &new->task;
 	my_cfs_rq.curr = &new->task.se;
+	shell = &new->task;
 	add_task( &new->task );
 	wake_up_new_task( &new->task );
 	//kernel_printf( "kernel shell created\n" );
@@ -379,7 +382,7 @@ static void scheduler( struct regs_context *pt_context )
 
 		if ( likely( prev != next ) )
 		{
-			kernel_printf( "there is a task change\n" );
+			//kernel_printf( "there is a task change\n" );
 			copy_context( pt_context, &( cfs_rq->current_task->context ) );
 
 			cfs_rq->current_task = next;
@@ -436,8 +439,9 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	new->task.pid = newpid;
 	new->task.ASID = newpid;
 	new->task.parent = cfs_rq->current_task->pid;
+	new->task.parentx = cfs_rq->current_task;
 	new->task.policy = SCHED_NORMAL;
-	new->task.prioiry = NICE_TO_PRIO( -20 );
+	new->task.prioiry = NICE_TO_PRIO( 10 );
 	new->task.THREAD_FLAG = 0;
 
 	//kernel_memset( &( new->task.se ), 0, sizeof( struct sched_entity ) );
@@ -475,18 +479,45 @@ int task_fork( char *name, void ( *entry )( unsigned int argc, void *args ), uns
 	return new->task.pid;
 }
 
-int test_vm( unsigned int argc, void *args )
+int loop( unsigned int argc, void *args )
+{
+	while ( 1 )
+	{
+		waits++;
+		if ( waits % 10000000 == 0 )
+		{
+			kernel_printf( "In wait..and the vurntime of this task: %x, and of parent: %x\n", my_cfs_rq.current_task->se.vruntime, my_cfs_rq.current_task->parentx->se.vruntime );
+		}
+	}
+	do_exit();
+}
+
+int testwait( unsigned int argc, void *args )
+{
+	pid_t newpid = task_fork( args, (void *)loop, argc, args, 0 );
+
+	waitpid( newpid );
+
+	do_exit();
+}
+
+int test( unsigned int argc, void *args )
 {
 	//kernel_printf( "I am here\n" );
 	int countxx = 0;
 	if ( kernel_strcmp( args, "loop" ) == 0 )
 	{
 		while ( 1 )
+			;
+	}
+	if ( kernel_strcmp( args, "loop1" ) == 0 )
+	{
+		while ( 1 )
 		{
 			times++;
-			if ( times == 1000 )
+			if ( times % 10000000 == 0 )
 			{
-				kernel_printf( "In loop...\n" );
+				kernel_printf( "In loop..and the vurntime of this task: %x, and of shell: %x\n", my_cfs_rq.current_task->se.vruntime, shell->se.vruntime );
 			}
 		}
 	}
@@ -495,18 +526,26 @@ int test_vm( unsigned int argc, void *args )
 		countxx++;
 		if ( countxx % 100000 == 0 )
 		{
-			kernel_printf( "test_vm can do it\n" );
+			kernel_printf( "test can do it\n" );
 		}
 	}
 	do_exit();
 }
 
+int execkwait( unsigned int argc, void *args )
+{
+	pid_t newpid = task_fork( args, (void *)testwait, argc, args, 0 );
+
+	return 1;
+}
+
 int execk( unsigned int argc, void *args, int is_wait )
 {
-	pid_t newpid = task_fork( args, (void *)test_vm, argc, args, 0 );
+	pid_t newpid = task_fork( args, (void *)test, argc, args, 0 );
 
 	if ( is_wait )
 	{
+		kernel_printf( "here shell begin to wait!\n" );
 		waitpid( newpid );
 	}
 	return 1;
@@ -639,15 +678,15 @@ int pc_kill( pid_t pid )
 
 void waitpid( pid_t pid )
 {
-	disable_interrupts();
+	//disable_interrupts();
 	struct task_struct *p = find_task_by_pid( pid );
 	if ( !p->se.on_rq )
 	{
 		kernel_printf( "The child process is not onrq\n" );
-		enable_interrupts();
+		//enable_interrupts();
 		return;
 	}
-	enable_interrupts();
+	//enable_interrupts();
 
 	asm volatile(
 	  "mfc0  $t0, $12\n\t"
@@ -693,21 +732,23 @@ void print_info()
 	kernel_printf( "Check the number in rbtree: %d\n", my_cfs_rq.nr_running );
 	kernel_printf( "========CFS_RQ INFO=========\n" );
 	kernel_printf( "\n" );
-	kernel_printf( "========TASK INFO=========\n" );
+	kernel_printf( "========SCHED INFO=========\n" );
 	list_for_each( pos, &tasks )
 	{
 		next = container_of( pos, struct task_struct, node );
 		kernel_printf( "name:%s \t pid:%d \t  prio:%d \t\n", next->name, next->pid, next->prioiry );
-	}
-	kernel_printf( "========TASK INFO=========\n" );
-	kernel_printf( "\n" );
-	kernel_printf( "========SCHED INFO=========\n" );
-	list_for_each( pos, &tasks )
-	{
-		next = container_of( pos, struct task_struct, node );
 		kernel_printf( "vruntime:%x \t load weight:%x \t\n", next->se.vruntime, next->se.load.weight );
 	}
 	kernel_printf( "========SCHED INFO=========\n" );
+	// kernel_printf( "\n" );
+	// kernel_printf( "========SCHED INFO=========\n" );
+	// struct list_head *ppos;
+	// // list_for_each( ppos, &tasks )
+	// // {
+	// // 	next = container_of( ppos, struct task_struct, node );
+	// // 	kernel_printf( "vruntime:%x \t load weight:%x \t\n", next->se.vruntime, next->se.load.weight );
+	// // }
+	// kernel_printf( "========SCHED INFO=========\n" );
 }
 
 static void set_priority( struct task_struct *p, long prioiry )

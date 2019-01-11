@@ -373,6 +373,10 @@ void parse_cmd()
 	{
 		result = execk( 1, (void *)param, 0 );
 	}
+	else if ( kernel_strcmp( ps_buffer, "ewait" ) == 0 )
+	{
+		result = execkwait( 1, (void *)param );
+	}
 	else if ( kernel_strcmp( ps_buffer, "kill" ) == 0 )
 	{
 		int pid = param[ 0 ] - '0';
@@ -381,6 +385,11 @@ void parse_cmd()
 	else if ( kernel_strcmp( ps_buffer, "wait" ) == 0 )
 	{
 		result = execk( 1, (void *)param, 1 );
+	}
+	else if ( kernel_strcmp( ps_buffer, "waitpid" ) == 0 )
+	{
+		int pid = param[ 0 ] - '0';
+		waitpid( pid );
 	}
 	else if ( kernel_strcmp( ps_buffer, "ps" ) == 0 )
 	{

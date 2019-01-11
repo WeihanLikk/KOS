@@ -67,6 +67,9 @@ u32 init_ext2( u32 base )
 	struct inode *ext2_root_inode;
 	struct vfsmount *ext2_root_mnt;
 
+	static u8 suffix = 'A' - 1;
+	suffix++;
+
 	// 构建 ext2_basic_information 结构
 	ext2_BI = (struct ext2_base_information *)kmalloc( sizeof( struct ext2_base_information ) );
 	if ( ext2_BI == 0 )
@@ -92,7 +95,8 @@ u32 init_ext2( u32 base )
 	ext2_fs_type = (struct file_system_type *)kmalloc( sizeof( struct file_system_type ) );
 	if ( ext2_fs_type == 0 )
 		return -ENOMEM;
-	ext2_fs_type->name = "ext2";
+	ext2_fs_type->name = "ext2__";
+	ext2_fs_type->name[ 5 ] = suffix;
 
 	// 构建 super_block 结构
 	ext2_sb = (struct super_block *)kmalloc( sizeof( struct super_block ) );
@@ -746,7 +750,6 @@ struct inode *ext2_create_inode( struct dentry *dentry, struct qstr *name )
 	// adopt write through mechanism
 	// inode->i_sb->s_op->write_inode( inode, parent );
 
-	return 0;
 	maxSect = blocks_per_group / BITS_PER_BYTE / SECTOR_SIZE;
 	curBit = 1;
 	for ( i = 0; i < maxSect; i++ )

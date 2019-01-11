@@ -103,6 +103,7 @@ static void update_curr( struct cfs_rq *cfs_rq )
 		delta_exec = calc_delta_mine( delta_exec, &curr->load );
 	curr->vruntime += delta_exec;
 
+	//kernel_printf( "check curr vruntime: %x\n", curr->vruntime );
 	//kernel_printf( "3here ??\n" );
 
 	if ( first_fair( cfs_rq ) )

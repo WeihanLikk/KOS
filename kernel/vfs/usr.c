@@ -177,33 +177,36 @@ u32 vfs_mnt( const u8 *tot )
 }
 
 // path_lookup 会直接完成follow_mount 考虑处理方案
-u32 vfs_umnt( const u8 *tot )
+u32 vfs_umnt( const u8 *path )
 {
-	u8 *fsname = tot;
-	u8 *path = tot;
-	while ( *path++ != ' ' )
-		;
-	*( path - 1 ) = '\0';
+	// u8 *fsname = tot;
+	// u8 *path = tot;
+	// while ( *path++ != ' ' )
+	// 	;
+	// *( path - 1 ) = '\0';
 
 	struct nameidata nd;
+	nd.last_type = LAST_NORM;
 	u32 err = path_lookup( path, 0, &nd );
-	struct list_head *begin = &( nd.dentry->d_subdirs );
-	struct list_head *a = begin->next;
-	struct dentry *dentry;
-	while ( a != begin )
-	{
-		dentry = list_entry( a, struct dentry, d_subdirs );
-		kernel_printf( "dentry_name: %s\nfsname: %s\n", dentry->d_name.name, fsname );
-		if ( dentry->d_mounted && kernel_strcmp( dentry->d_name.name, fsname ) == 0 )
-			break;
-		a = a->next;
-	}
+	// struct list_head *begin = &( nd.dentry->d_subdirs );
+	// struct list_head *a = begin->next;
+	// struct dentry *dentry;
+	// while ( a != begin )
+	// {
+	// 	dentry = list_entry( a, struct dentry, d_subdirs );
+	// 	kernel_printf( "dentry_name: %s\nfsname: %s\nname_len: %d", dentry->d_name.name, fsname, dentry->d_name.len );
+	// 	kernel_printf( "inode is null :%d", dentry->d_inode == 0 );
+	// 	// if ( dentry->d_mounted && kernel_strcmp( dentry->d_name.name, fsname ) == 0 )
+	// 	if ( dentry->d_mounted ) break;
+	// 	a = a->next;
+	// }
 
-	if ( a == begin )
-	{
-		kernel_printf( "No such file system subdir!\n" );
-		goto out;
-	}
+	// if ( a == begin )
+	// {
+	// 	kernel_printf( "No such file system subdir!\n" );
+	// 	goto out;
+	// }
+
 	if ( IS_ERR_VALUE( err ) )
 	{
 		if ( err == -ENOENT )
@@ -211,14 +214,13 @@ u32 vfs_umnt( const u8 *tot )
 		return err;
 	}
 
-	if ( dentry->d_pinned )
+	if ( nd.dentry->d_pinned )
 	{
 		kernel_printf( "cannot unmount pinned entry!\n" );
 		goto out;
 	}
-
 	kernel_printf( "Here starts unmount\n" );
-	unmount_fs( dentry );
+	unmount_fs( nd.dentry );
 
 out:
 	return 0;

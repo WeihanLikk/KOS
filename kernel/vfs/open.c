@@ -150,6 +150,9 @@ struct dentry *__lookup_hash( struct qstr *name, struct dentry *base, struct nam
 
 u32 path_lookup( const u8 *name, u32 flags, struct nameidata *nd )
 {
+	u32 follow = !( nd->last_type == LAST_NORM );
+	nd->last_type = 0;
+
 	nd->last_type = LAST_ROOT;
 	nd->flags = flags;
 
@@ -169,12 +172,12 @@ u32 path_lookup( const u8 *name, u32 flags, struct nameidata *nd )
 		nd->dentry = pwd_dentry;
 	}
 
-	return link_path_walk( name, nd );
+	return link_path_walk( name, nd, follow );
 }
 
 // 从文件路径名导出相应的索引节点
 // 暂时不考虑任何与符号链接有关的事
-u32 link_path_walk( const u8 *name, struct nameidata *nd )
+u32 link_path_walk( const u8 *name, struct nameidata *nd, u32 follow )
 {
 	u32 err;
 	struct path next;
@@ -246,7 +249,8 @@ u32 link_path_walk( const u8 *name, struct nameidata *nd )
 		// 检查刚解析的分量（next.dentry）是否指向某个文件系统安装点的一个目录
 		// 是的话更新这个值，以便它们指向由这个路径分量所表示的目录上安装的
 		// 最上层文件系统的目录项对象和已安装文件系统对象
-		follow_mount( &next.mnt, &next.dentry );
+		if ( follow )
+			follow_mount( &next.mnt, &next.dentry );
 
 		// 检查刚解析的分量，首先检查对应inode是否为空
 		err = -ENOENT;
